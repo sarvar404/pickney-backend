@@ -18,6 +18,7 @@ import eventsRouter from "./routes/events.js";
 import activitiesRouter from "./routes/activities.js";
 import tagsRouter from "./routes/tags.js";
 import devicesRouter from "./routes/devices.js";
+import usersRouter from "./routes/users.js";
 
 const upload = multer({
   dest: "uploads/",
@@ -57,6 +58,7 @@ app.use('/api', eventsRouter);
 app.use('/api', activitiesRouter);
 app.use('/api', tagsRouter);
 app.use('/api', devicesRouter);
+app.use('/api', usersRouter);
 
 app.listen(PORT, () => {
   Connection();
