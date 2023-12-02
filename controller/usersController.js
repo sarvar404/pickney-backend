@@ -1,6 +1,9 @@
+import expressAsyncHandler from "express-async-handler";
 import mongoose from "mongoose";
 import userSchema from "../model/userSchema.js";
 import refreshTokenSchema from "../model/refreshTokenSchema.js";
+import OTPSchema from "../model/OTPSchema.js";
+import ForgotSchema from "../model/ForgotSchema.js";
 import { compareAsc, format, parseISO } from "date-fns";
 import { setUser } from "../service/auth.js";
 // import { v4 as uuidv4 } from "uuid";
@@ -8,9 +11,272 @@ import { setUser } from "../service/auth.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
+import { generateOTP } from "../service/generateOTP.js";
+import nodemailer from "nodemailer";
 
 dotenv.config();
 const SECRET_KEY = process.env.SECRET_KEY;
+let transporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST,
+  port: process.env.SMTP_PORT,
+  secure: false,
+  auth: {
+    user: process.env.SMTP_MAIL,
+    pass: process.env.SMTP_PASSWORD,
+  },
+});
+
+// Function to set OTP in user session
+function setUserDataInSession(request, userId, otp) {
+  request.session.userData = {
+    userId,
+    otp: {
+      value: otp,
+      // Set the expiration time for the OTP (e.g., 5 minutes)
+      expirationTime: Date.now() + 5 * 60 * 1000,
+    },
+  };
+}
+
+export const OTPVerification = expressAsyncHandler(
+  async (request, response) => {
+    try {
+      const { email } = request.body;
+
+      const user = await userSchema.findOne({
+        email: { $regex: new RegExp(`^${email}$`, "i") },
+      });
+
+      if (!user) {
+        return response
+          .status(400)
+          .json({ success: false, message: "Invalid Email Address" });
+      }
+
+      const otp = generateOTP();
+
+      // Set OTP in otp collection
+      const expiryDate = new Date(Date.now() + 2 * 60 * 1000); // Set expiry date 5 minutes ahead
+
+      // Save OTP details in the OTP collection
+      const otpDocument = await OTPSchema.create({
+        userId: user._id,
+        otp,
+        expiryDate,
+        status: true,
+      });
+
+      const mailOptions = {
+        from: process.env.SMTP_MAIL,
+        to: email,
+        subject: "OTP from Pickney verification.",
+        text: `Your OTP is: ${otp}`,
+      };
+
+      transporter.sendMail(mailOptions, function (error, info) {
+        if (error) {
+          console.error(error);
+          return response
+            .status(500)
+            .json({ success: false, message: "Failed to send OTP email" });
+        } else {
+          // console.log('Email sent successfully!');
+          setTimeout(async () => {
+            await OTPSchema.findByIdAndUpdate(otpDocument._id, {
+              status: false,
+            });
+            console.log("OTP status updated after 2 minutes.");
+          }, 2 * 60 * 1000);
+
+          return response.status(200).json({
+            success: true,
+            message: "OTP sent successfully",
+            userId: user.id,
+          });
+        }
+      });
+    } catch (err) {
+      console.error(err);
+      return response
+        .status(500)
+        .json({ success: false, message: "Internal server error" });
+    }
+  }
+);
+
+export const OTPVerificationAndSignIn = expressAsyncHandler(
+  async (request, response) => {
+    try {
+      const { userId, otp } = request.body;
+
+      // Find the latest OTP for the given user ID
+      const latestOTP = await OTPSchema.findOne({
+        userId,
+        status: true,
+        expiryDate: { $gt: new Date() }, // Ensure the OTP is not expired
+      }).sort({ _id: -1 });
+
+      if (!latestOTP) {
+        return response.status(400).json({
+          success: false,
+          message: "OTP not found or has been expired",
+        });
+      }
+
+      // Compare the provided OTP with the stored OTP
+      if (otp !== latestOTP.otp) {
+        return response
+          .status(400)
+          .json({ success: false, message: "Invalid OTP" });
+      }
+
+      // Update the OTP status to false after successful verification
+      await OTPSchema.findByIdAndUpdate(latestOTP._id, { status: false });
+
+      // Your user sign-in logic here using userId
+      const user = await userSchema.findById(userId);
+
+      if (!user) {
+        return response
+          .status(400)
+          .json({ success: false, message: "User not found" });
+      }
+
+      // Perform your sign-in logic here
+
+      return response
+        .status(200)
+        .json({ success: true, message: "Sign-in successful" });
+    } catch (err) {
+      console.error(err);
+      return response
+        .status(500)
+        .json({ success: false, message: "Internal server error" });
+    }
+  }
+);
+
+export const forgotAndGetOTP = expressAsyncHandler(
+  async (request, response) => {
+    try {
+      const { email } = request.body;
+
+      const user = await userSchema.findOne({
+        email: { $regex: new RegExp(`^${email}$`, "i") },
+      });
+
+      if (!user) {
+        return response
+          .status(400)
+          .json({ success: false, message: "Invalid Email Address" });
+      }
+
+      const otp = generateOTP();
+
+      // Set OTP in otp collection
+      const expiryDate = new Date(Date.now() + 2 * 60 * 1000); // Set expiry date 5 minutes ahead
+
+      // Save OTP details in the OTP collection
+      const otpDocument = await ForgotSchema.create({
+        userId: user._id,
+        otp,
+        expiryDate,
+        status: true,
+      });
+
+      const mailOptions = {
+        from: process.env.SMTP_MAIL,
+        to: email,
+        subject: "OTP from Pickney verification.",
+        text: `Your OTP is: ${otp}`,
+      };
+
+      transporter.sendMail(mailOptions, function (error, info) {
+        if (error) {
+          console.error(error);
+          return response
+            .status(500)
+            .json({ success: false, message: "Failed to send OTP email" });
+        } else {
+          // console.log('Email sent successfully!');
+          setTimeout(async () => {
+            await ForgotSchema.findByIdAndUpdate(otpDocument._id, {
+              status: false,
+            });
+            console.log("OTP status updated after 2 minutes.");
+          }, 2 * 60 * 1000);
+
+          return response.status(200).json({
+            success: true,
+            message: "OTP sent successfully",
+            userId: user.id,
+          });
+        }
+      });
+    } catch (err) {
+      console.error(err);
+      return response
+        .status(500)
+        .json({ success: false, message: "Internal server error" });
+    }
+  }
+);
+
+export const reSetPassword = expressAsyncHandler(async (request, response) => {
+  try {
+    const { userId, otp, email, password } = request.body;
+
+    // Find the latest OTP for the given user ID
+    const latestOTP = await ForgotSchema.findOne({
+      userId,
+      status: true,
+      expiryDate: { $gt: new Date() }, // Ensure the OTP is not expired
+    }).sort({ _id: -1 });
+
+    if (!latestOTP) {
+      return response.status(400).json({
+        success: false,
+        message: "OTP not found or has been expired",
+      });
+    }
+
+    // Compare the provided OTP with the stored OTP
+    if (otp !== latestOTP.otp) {
+      return response
+        .status(400)
+        .json({ success: false, message: "Invalid OTP" });
+    }
+
+    // Update the OTP status to false after successful verification
+    await ForgotSchema.findByIdAndUpdate(latestOTP._id, { status: false });
+
+    // Find the user by userId
+    const user = await userSchema.findById(userId);
+
+    if (!user) {
+      return response
+        .status(400)
+        .json({ success: false, message: "User not found" });
+    }
+
+    // Hash the new password using bcrypt
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+    // Update the user's password with the hashed password
+    user.password = hashedPassword;
+    await user.save();
+
+    return response
+      .status(200)
+      .json({ success: true, message: "Password reset successful" });
+  } catch (err) {
+    console.error(err);
+    return response
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
+  }
+});
 
 export const registration = async (request, response) => {
   try {
@@ -124,7 +390,7 @@ export const accessTrue = async (request, response) => {
       message: "You have access",
     });
   } catch (error) {
-    console.log(error , "inside controller ->...................")
+    console.log(error, "inside controller ->...................");
     response.status(400).json({ error: error.message });
   }
 };
@@ -144,7 +410,7 @@ export const deleteUser = async (request, response) => {
 
     response.status(200).json({
       success: true,
-      message: "User deleted successfully"
+      message: "User deleted successfully",
     });
   } catch (error) {
     response.status(400).json({ success: false, error: error.message });
