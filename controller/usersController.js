@@ -3,16 +3,22 @@ import mongoose from "mongoose";
 import userSchema from "../model/userSchema.js";
 import refreshTokenSchema from "../model/refreshTokenSchema.js";
 import OTPSchema from "../model/OTPSchema.js";
+import registrationOTPSchema from "../model/registrationOTPSchema.js";
 import ForgotSchema from "../model/ForgotSchema.js";
 import { compareAsc, format, parseISO } from "date-fns";
 import { setUser } from "../service/auth.js";
 // import { v4 as uuidv4 } from "uuid";
-
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 import { generateOTP } from "../service/generateOTP.js";
 import nodemailer from "nodemailer";
+import { Vonage } from "@vonage/server-sdk";
+
+const vonage = new Vonage({
+  apiKey: process.env.VONAGE_API_KEY,
+  apiSecret: process.env.VONAGE_SECRET_API,
+});
 
 dotenv.config();
 const SECRET_KEY = process.env.SECRET_KEY;
@@ -278,31 +284,273 @@ export const reSetPassword = expressAsyncHandler(async (request, response) => {
   }
 });
 
-export const registration = async (request, response) => {
+// export const registration = async (request, response) => {
+//   try {
+//     const saltRounds = 10;
+//     const passwordHash = await bcrypt.hash(request.body.password, saltRounds);
+
+//     const userData = {
+//       name: request.body.name,
+//       email: request.body.email,
+//       guardian: request.body.guardian,
+//       phone: request.body.phone,
+//       password: passwordHash,
+//       photo: request.body.photo,
+//     };
+
+//     // Create a new user in the database
+//     const savedUser = await userSchema.create(userData);
+
+//     // Send Vonage verification code via SMS
+//     const number = `91${request.body.phone}`; // Assuming phone is provided in international format
+
+//     // Start verification
+//     const startResponse = await vonage.verify.start({
+//       number,
+//       brand: 'Vonage',
+//     });
+//     const requestId = startResponse.request_id;
+
+//     console.log(`Verification started. Request ID: ${requestId}`);
+
+//     // Optionally, you can check the verification code (if received from the user)
+//     // const checkResponse = await vonage.verify.check(requestId, CODE);
+//     // console.log(checkResponse);
+
+//     response.status(201).json({
+//       success: true,
+//       message: 'User registration successful. OTP sent to the provided phone number.',
+//       id: savedUser._id,
+//       requestId, // Optionally, you can include the requestId in the response
+//     });
+//   } catch (error) {
+//     response.status(400).json({ error: error.message });
+//   }
+// };
+
+export const registration = expressAsyncHandler(async (request, response) => {
   try {
-    const saltRounds = 10;
-    const passwordHash = await bcrypt.hash(request.body.password, saltRounds);
-
-    const userData = {
-      name: request.body.name,
+    // Check if a user with the same email and unverified status already exists
+    let existingUser = await userSchema.findOne({
       email: request.body.email,
-      guardian: request.body.guardian,
-      phone: request.body.phone,
-      password: passwordHash, // Store the hashed password
-      photo: request.body.photo,
-    };
-
-    const savedUser = await userSchema.create(userData);
-
-    response.status(201).json({
-      success: true,
-      message: "User registration successful",
-      id: savedUser._id, // Assuming _id is the field name for the user ID
+      verified: false,
     });
-  } catch (error) {
-    response.status(400).json({ error: error.message });
+
+    if (existingUser) {
+      if (request.body.password !== request.body.confirmPassword) {
+        return response
+            .status(400)
+            .json({ success: false, message: "Password and confirm password do not match" });
+      } 
+      // User is unverified, update the existing user's information
+      const saltRounds = 10;
+      const passwordHash = await bcrypt.hash(request.body.password, saltRounds);
+
+      const userData = {
+        name: request.body.name,
+        guardian: request.body.guardian,
+        phone: request.body.phone,
+        password: passwordHash,
+        photo: request.body.photo,
+        verified: false,
+      };
+
+      existingUser = await userSchema.findByIdAndUpdate(existingUser._id, userData, {
+        new: true, // Return the updated document
+      });
+
+      const otp = generateOTP();
+
+      // Set OTP in otp collection
+      const expiryDate = new Date(Date.now() + process.env.TIMEOUT_OTP * 60 * 1000); // Set expiry date 2 minutes ahead
+
+      // Save OTP details in the OTP collection
+      const otpDocument = await registrationOTPSchema.create({
+        userId: existingUser._id,
+        otp,
+        expiryDate,
+        status: true,
+      });
+
+      const mailOptions = {
+        from: process.env.SMTP_MAIL,
+        to: existingUser.email,
+        subject: "OTP from Pickney verification.",
+        text: `Your OTP is: ${otp}`,
+      };
+
+      transporter.sendMail(mailOptions, async function (error, info) {
+        if (error) {
+          console.error(error);
+          // Rollback: Delete the OTP record if OTP email sending fails
+          await OTPSchema.findByIdAndDelete(otpDocument._id);
+
+          return response
+            .status(500)
+            .json({ success: false, message: "Failed to send OTP email" });
+        } else {
+          // console.log('Email sent successfully!');
+          setTimeout(async () => {
+            await OTPSchema.findByIdAndUpdate(otpDocument._id, {
+              status: false,
+            });
+            console.log("OTP status updated after 2 minutes.");
+          }, process.env.TIMEOUT_OTP * 60 * 1000);
+
+          return response.status(200).json({
+            success: true,
+            message: "OTP sent successfully",
+            userId: existingUser._id,
+          });
+        }
+      });
+    } else {
+      // Check if a user with the same email and verified status exists
+      const verifiedUser = await userSchema.findOne({
+        email: request.body.email,
+        verified: true,
+      });
+
+      if (verifiedUser) {
+        return response.status(400).json({
+          success: false,
+          message: "User with the same email is already verified",
+        });
+      }
+
+      if (request.body.password !== request.body.confirmPassword) {
+        return response
+            .status(400)
+            .json({ success: false, message: "Password and confirm password do not match" });
+      } 
+
+      // User not found, create a new user
+      const saltRounds = 10;
+      const passwordHash = await bcrypt.hash(request.body.password, saltRounds);
+
+      const userData = {
+        name: request.body.name,
+        email: request.body.email,
+        guardian: request.body.guardian,
+        phone: request.body.phone,
+        password: passwordHash,
+        photo: request.body.photo,
+        verified: false,
+      };
+
+      // Create a new user in the database
+      const savedUser = await userSchema.create(userData);
+
+      const otp = generateOTP();
+
+      // Set OTP in otp collection
+      const expiryDate = new Date(Date.now() + process.env.TIMEOUT_OTP * 60 * 1000); // Set expiry date 2 minutes ahead
+
+      // Save OTP details in the OTP collection
+      const otpDocument = await registrationOTPSchema.create({
+        userId: savedUser._id,
+        otp,
+        expiryDate,
+        status: true,
+      });
+
+      const mailOptions = {
+        from: process.env.SMTP_MAIL,
+        to: savedUser.email,
+        subject: "OTP from Pickney verification.",
+        text: `Your OTP is: ${otp}`,
+      };
+
+      transporter.sendMail(mailOptions, async function (error, info) {
+        if (error) {
+          console.error(error);
+          // Rollback: Delete the user if OTP email sending fails
+          await userSchema.findByIdAndDelete(savedUser._id);
+          await OTPSchema.findByIdAndDelete(otpDocument._id);
+
+          return response
+            .status(500)
+            .json({ success: false, message: "Failed to send OTP email" });
+        } else {
+          // console.log('Email sent successfully!');
+          setTimeout(async () => {
+            await OTPSchema.findByIdAndUpdate(otpDocument._id, {
+              status: false,
+            });
+            console.log("OTP status updated after 2 minutes.");
+          }, process.env.TIMEOUT_OTP * 60 * 1000);
+
+          return response.status(200).json({
+            success: true,
+            message: "OTP sent successfully",
+            userId: savedUser._id,
+          });
+        }
+      });
+    }
+  } catch (err) {
+    console.error(err);
+    return response
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
   }
-};
+});
+
+
+
+export const registrationVerify = expressAsyncHandler(
+  async (request, response) => {
+    try {
+      const { userId, otp } = request.body;
+
+      // Find the latest OTP for the given user ID
+      const latestOTP = await registrationOTPSchema.findOne({
+        userId,
+        status: true,
+        expiryDate: { $gt: new Date() }, // Ensure the OTP is not expired
+      }).sort({ _id: -1 });
+
+      if (!latestOTP) {
+        return response.status(400).json({
+          success: false,
+          message: "OTP not found or has been expired",
+        });
+      }
+
+      // Compare the provided OTP with the stored OTP
+      if (otp !== latestOTP.otp) {
+        return response
+          .status(400)
+          .json({ success: false, message: "Invalid OTP" });
+      }
+
+      // Update the OTP status to false after successful verification
+      await registrationOTPSchema.findByIdAndUpdate(latestOTP._id, { status: false });
+      await userSchema.findByIdAndUpdate(userId, { verified: true });
+
+      // Your user sign-in logic here using userId
+      const user = await userSchema.findById(userId);
+
+      if (!user) {
+        return response
+          .status(400)
+          .json({ success: false, message: "User not found" });
+      }
+
+      // Perform your sign-in logic here
+
+      return response
+        .status(200)
+        .json({ success: true, message: "Sign-in successful" });
+    } catch (err) {
+      console.error(err);
+      return response
+        .status(500)
+        .json({ success: false, message: "Internal server error" });
+    }
+  }
+);
+
 
 export const login = async (request, response) => {
   try {

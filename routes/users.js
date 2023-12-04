@@ -1,12 +1,13 @@
 import express from "express";
 import dotenv from "dotenv";
-import { OTPVerification, OTPVerificationAndSignIn, accessTrue, deleteUser, forgotAndGetOTP, login, reSetPassword, refreshToken, registration } from "../controller/usersController.js";
+import { OTPVerification, OTPVerificationAndSignIn, accessTrue, deleteUser, forgotAndGetOTP, login, reSetPassword, refreshToken, registration, registrationVerify } from "../controller/usersController.js";
 import { verifyAccessToken } from "../middlewares/middlewareAuth.js";
 
 dotenv.config();
 const router = express.Router();
 
 router.post("/user/register", registration);
+router.post("/user/regist-verification", registrationVerify);
 router.post("/user/login", login);
 router.post("/user/refresh",refreshToken);
 router.post("/user/verify",verifyAccessToken,accessTrue);

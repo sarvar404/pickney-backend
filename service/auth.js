@@ -41,6 +41,24 @@ export function getUser(token) {
   }
 }
 
+
+export function setKids(kid) {
+  const expirationTime = 120;
+  return jwt.sign({
+    _id: kid._id,
+    kidId: kid.kidId
+  }, SECRET_KEY, { expiresIn: "120s" });
+}
+
+export function getKids(token) {
+  if (!token) return null;
+  try {
+    return jwt.verify(token, SECRET_KEY);
+  } catch (error) {
+    return error;
+  }
+}
+
 export function setRandomGeneratedKey() {
   const key = generateRandomKey(3);
 

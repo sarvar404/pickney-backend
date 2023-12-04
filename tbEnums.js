@@ -1,6 +1,9 @@
 export const userTb = "all_user_sr01";
+export const kidTb = "all_kid_sr01";
 export const refreshtokenTb = "all_refreshtoken_sr01";
+export const refreshtokenKidTb = "all_refreshtoken_kid_sr01";
 export const OTPTb = "all_otp_sr01";
+export const OTPRegistrationTb = "all_otp_registration_sr01";
 export const forgotTb = "all_forgot_sr01";
 
 
