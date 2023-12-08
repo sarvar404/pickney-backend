@@ -1,33 +1,50 @@
 import mongoose from "mongoose";
-import { eventTb } from "../tbEnums.js";
+import { eventTb, userTb } from "../tbEnums.js";
 
 const eventSchema = new mongoose.Schema(
   {
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: userTb, // Reference to the user schema
+      required: true,
+    },
     name: {
       type: String,
-    },
-    created_by: {
-      type: String,
-      // You might want to change this type based on your user structure
+      required: true,
     },
     stars: {
       type: Number,
-      // Assuming stars can be fractional, change to Integer if it should be a whole number
+      required: true,
     },
-    type: {
+    
+    event_type: {
       type: String,
-      enum: ["credit", "debit"],
+      enum: ["D", "M", "W", "A"],
+      required: true,
+    },
+    reward_type: {
+      type: String,
+      enum: ["C", "D"],
+      required: true,
     },
     is_recurring: {
       type: Boolean,
-    },
-    frequency: {
-      type: Number,
-      enum: [1, 2, 3], // (daily, weekly, monthly)
+      default: true,
+      required: true,
     },
     tags: {
       type: [String],
       // Assuming the tags are strings representing IDs
+    },
+    is_auto_complete_event: {
+      type: Boolean,
+    },
+    frequency: {
+      type: String,
+      enum: ["D", "M", "W", "A"],
+    },
+    max_count: {
+      type: Number,
     },
     start_at: {
       type: Date,
@@ -36,14 +53,12 @@ const eventSchema = new mongoose.Schema(
       type: Date,
     },
     status: {
-      type: Number,
-      enum: [1, 2, 3], // [ active, inactive, deleted]
-    },
-    is_auto_complete: {
       type: Boolean,
+      default: true,
+      required: true,
     },
-    max_count: {
-      type: Number,
+    photo: {
+      type: [String],
     },
   },
   { timestamps: { createdAt: "created_at", updatedAt: "updated_at" } }

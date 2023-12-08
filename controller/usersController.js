@@ -1,12 +1,12 @@
 import expressAsyncHandler from "express-async-handler";
 import mongoose from "mongoose";
 import userSchema from "../model/userSchema.js";
+import kidSchema from "../model/kidSchema.js";
 import refreshTokenSchema from "../model/refreshTokenSchema.js";
-import OTPSchema from "../model/OTPSchema.js";
 import registrationOTPSchema from "../model/registrationOTPSchema.js";
 import ForgotSchema from "../model/ForgotSchema.js";
 import { compareAsc, format, parseISO } from "date-fns";
-import { setUser } from "../service/auth.js";
+import { setKids, setUser } from "../service/auth.js";
 // import { v4 as uuidv4 } from "uuid";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
@@ -14,6 +14,8 @@ import dotenv from "dotenv";
 import { generateOTP } from "../service/generateOTP.js";
 import nodemailer from "nodemailer";
 import { Vonage } from "@vonage/server-sdk";
+import { KID, PARENT } from "../contentId.js";
+import { code404 } from "../responseCode.js";
 
 const vonage = new Vonage({
   apiKey: process.env.VONAGE_API_KEY,
@@ -65,7 +67,7 @@ export const OTPVerification = expressAsyncHandler(
       const expiryDate = new Date(Date.now() + 2 * 60 * 1000); // Set expiry date 5 minutes ahead
 
       // Save OTP details in the OTP collection
-      const otpDocument = await OTPSchema.create({
+      const otpDocument = await registrationOTPSchema.create({
         userId: user._id,
         otp,
         expiryDate,
@@ -88,10 +90,10 @@ export const OTPVerification = expressAsyncHandler(
         } else {
           // console.log('Email sent successfully!');
           setTimeout(async () => {
-            await OTPSchema.findByIdAndUpdate(otpDocument._id, {
+            await registrationOTPSchema.findByIdAndUpdate(otpDocument._id, {
               status: false,
             });
-            console.log("OTP status updated after 2 minutes.");
+            // console.log("OTP status updated after 2 minutes.");
           }, 2 * 60 * 1000);
 
           return response.status(200).json({
@@ -116,11 +118,13 @@ export const OTPVerificationAndSignIn = expressAsyncHandler(
       const { userId, otp } = request.body;
 
       // Find the latest OTP for the given user ID
-      const latestOTP = await OTPSchema.findOne({
-        userId,
-        status: true,
-        expiryDate: { $gt: new Date() }, // Ensure the OTP is not expired
-      }).sort({ _id: -1 });
+      const latestOTP = await registrationOTPSchema
+        .findOne({
+          userId,
+          status: true,
+          expiryDate: { $gt: new Date() }, // Ensure the OTP is not expired
+        })
+        .sort({ _id: -1 });
 
       if (!latestOTP) {
         return response.status(400).json({
@@ -137,7 +141,9 @@ export const OTPVerificationAndSignIn = expressAsyncHandler(
       }
 
       // Update the OTP status to false after successful verification
-      await OTPSchema.findByIdAndUpdate(latestOTP._id, { status: false });
+      await registrationOTPSchema.findByIdAndUpdate(latestOTP._id, {
+        status: false,
+      });
 
       // Your user sign-in logic here using userId
       const user = await userSchema.findById(userId);
@@ -209,7 +215,7 @@ export const forgotAndGetOTP = expressAsyncHandler(
             await ForgotSchema.findByIdAndUpdate(otpDocument._id, {
               status: false,
             });
-            console.log("OTP status updated after 2 minutes.");
+            // console.log("OTP status updated after 2 minutes.");
           }, 2 * 60 * 1000);
 
           return response.status(200).json({
@@ -337,11 +343,6 @@ export const registration = expressAsyncHandler(async (request, response) => {
     });
 
     if (existingUser) {
-      if (request.body.password !== request.body.confirmPassword) {
-        return response
-            .status(400)
-            .json({ success: false, message: "Password and confirm password do not match" });
-      } 
       // User is unverified, update the existing user's information
       const saltRounds = 10;
       const passwordHash = await bcrypt.hash(request.body.password, saltRounds);
@@ -355,14 +356,20 @@ export const registration = expressAsyncHandler(async (request, response) => {
         verified: false,
       };
 
-      existingUser = await userSchema.findByIdAndUpdate(existingUser._id, userData, {
-        new: true, // Return the updated document
-      });
+      existingUser = await userSchema.findByIdAndUpdate(
+        existingUser._id,
+        userData,
+        {
+          new: true, // Return the updated document
+        }
+      );
 
-      const otp = generateOTP();
+      const otp = generateOTP().toUpperCase();
 
       // Set OTP in otp collection
-      const expiryDate = new Date(Date.now() + process.env.TIMEOUT_OTP * 60 * 1000); // Set expiry date 2 minutes ahead
+      const expiryDate = new Date(
+        Date.now() + process.env.TIMEOUT_OTP * 60 * 1000
+      ); // Set expiry date 2 minutes ahead
 
       // Save OTP details in the OTP collection
       const otpDocument = await registrationOTPSchema.create({
@@ -383,7 +390,7 @@ export const registration = expressAsyncHandler(async (request, response) => {
         if (error) {
           console.error(error);
           // Rollback: Delete the OTP record if OTP email sending fails
-          await OTPSchema.findByIdAndDelete(otpDocument._id);
+          await registrationOTPSchema.findByIdAndDelete(otpDocument._id);
 
           return response
             .status(500)
@@ -391,10 +398,10 @@ export const registration = expressAsyncHandler(async (request, response) => {
         } else {
           // console.log('Email sent successfully!');
           setTimeout(async () => {
-            await OTPSchema.findByIdAndUpdate(otpDocument._id, {
+            await registrationOTPSchema.findByIdAndUpdate(otpDocument._id, {
               status: false,
             });
-            console.log("OTP status updated after 2 minutes.");
+            // console.log("OTP status updated after 2 minutes.");
           }, process.env.TIMEOUT_OTP * 60 * 1000);
 
           return response.status(200).json({
@@ -418,12 +425,6 @@ export const registration = expressAsyncHandler(async (request, response) => {
         });
       }
 
-      if (request.body.password !== request.body.confirmPassword) {
-        return response
-            .status(400)
-            .json({ success: false, message: "Password and confirm password do not match" });
-      } 
-
       // User not found, create a new user
       const saltRounds = 10;
       const passwordHash = await bcrypt.hash(request.body.password, saltRounds);
@@ -436,6 +437,7 @@ export const registration = expressAsyncHandler(async (request, response) => {
         password: passwordHash,
         photo: request.body.photo,
         verified: false,
+        role: PARENT,
       };
 
       // Create a new user in the database
@@ -444,7 +446,9 @@ export const registration = expressAsyncHandler(async (request, response) => {
       const otp = generateOTP();
 
       // Set OTP in otp collection
-      const expiryDate = new Date(Date.now() + process.env.TIMEOUT_OTP * 60 * 1000); // Set expiry date 2 minutes ahead
+      const expiryDate = new Date(
+        Date.now() + process.env.TIMEOUT_OTP * 60 * 1000
+      ); // Set expiry date 2 minutes ahead
 
       // Save OTP details in the OTP collection
       const otpDocument = await registrationOTPSchema.create({
@@ -466,7 +470,7 @@ export const registration = expressAsyncHandler(async (request, response) => {
           console.error(error);
           // Rollback: Delete the user if OTP email sending fails
           await userSchema.findByIdAndDelete(savedUser._id);
-          await OTPSchema.findByIdAndDelete(otpDocument._id);
+          await registrationOTPSchema.findByIdAndDelete(otpDocument._id);
 
           return response
             .status(500)
@@ -474,10 +478,10 @@ export const registration = expressAsyncHandler(async (request, response) => {
         } else {
           // console.log('Email sent successfully!');
           setTimeout(async () => {
-            await OTPSchema.findByIdAndUpdate(otpDocument._id, {
+            await registrationOTPSchema.findByIdAndUpdate(otpDocument._id, {
               status: false,
             });
-            console.log("OTP status updated after 2 minutes.");
+            // console.log("OTP status updated after 2 minutes.");
           }, process.env.TIMEOUT_OTP * 60 * 1000);
 
           return response.status(200).json({
@@ -496,19 +500,19 @@ export const registration = expressAsyncHandler(async (request, response) => {
   }
 });
 
-
-
 export const registrationVerify = expressAsyncHandler(
   async (request, response) => {
     try {
       const { userId, otp } = request.body;
 
       // Find the latest OTP for the given user ID
-      const latestOTP = await registrationOTPSchema.findOne({
-        userId,
-        status: true,
-        expiryDate: { $gt: new Date() }, // Ensure the OTP is not expired
-      }).sort({ _id: -1 });
+      const latestOTP = await registrationOTPSchema
+        .findOne({
+          userId,
+          status: true,
+          expiryDate: { $gt: new Date() }, // Ensure the OTP is not expired
+        })
+        .sort({ _id: -1 });
 
       if (!latestOTP) {
         return response.status(400).json({
@@ -525,7 +529,9 @@ export const registrationVerify = expressAsyncHandler(
       }
 
       // Update the OTP status to false after successful verification
-      await registrationOTPSchema.findByIdAndUpdate(latestOTP._id, { status: false });
+      await registrationOTPSchema.findByIdAndUpdate(latestOTP._id, {
+        status: false,
+      });
       await userSchema.findByIdAndUpdate(userId, { verified: true });
 
       // Your user sign-in logic here using userId
@@ -551,59 +557,107 @@ export const registrationVerify = expressAsyncHandler(
   }
 );
 
+const PARENTLOGIN = async (email, password, response) => {
+  const user = await userSchema.findOne({
+    email: { $regex: new RegExp(`^${email}$`, "i") },
+  });
+
+  if (!user) {
+    throw new Error("Invalid email or password");
+  }
+
+  const passwordMatch = await bcrypt.compare(password, user.password);
+
+  if (!passwordMatch) {
+    throw new Error("Invalid email or password");
+  }
+
+  let refreshTokenDocument = await refreshTokenSchema.findOne({
+    userId: user._id,
+  });
+
+  if (!refreshTokenDocument) {
+    const token = setUser(user);
+    refreshTokenDocument = new refreshTokenSchema({
+      userId: user._id,
+      refreshToken: token,
+      token: token,
+      role: PARENT,
+    });
+    await refreshTokenDocument.save();
+  }
+
+  response.cookie("token", refreshTokenDocument.token);
+  response.cookie("refreshToken", refreshTokenDocument.refreshToken);
+  response.status(200).json({
+    success: true,
+    message: "You have successfully logged in",
+    token: refreshTokenDocument.token,
+    refreshToken: refreshTokenDocument.refreshToken,
+    role: user.role,
+  });
+};
+
+const KIDLOGIN = async (uniqueId, password, response) => {
+  const kid = await userSchema.findOne({
+    uniqueId: uniqueId,
+  });
+
+  if (!kid) {
+    return response.status(404).json({
+      code: code404,
+      success: false,
+      message: "Invalid User Id",
+    });
+  }
+
+  const passwordMatch = await bcrypt.compare(password, kid.password);
+
+  if (!passwordMatch) {
+    return response.status(404).json({
+      code: code404,
+      success: false,
+      message: "Invalid User Password",
+    });
+  }
+
+  let refreshTokenDocument = await refreshTokenSchema.findOne({
+    kidId: kid._id,
+  });
+
+  if (!refreshTokenDocument) {
+    const token = setUser(kid);
+    refreshTokenDocument = new refreshTokenSchema({
+      userId: kid._id,
+      refreshToken: token,
+      token: token,
+      role: KID,
+    });
+    await refreshTokenDocument.save();
+  }
+
+  response.cookie("token", refreshTokenDocument.token);
+  response.cookie("refreshToken", refreshTokenDocument.refreshToken);
+  response.status(200).json({
+    success: true,
+    message: "You have successfully logged in",
+    token: refreshTokenDocument.token,
+    refreshToken: refreshTokenDocument.refreshToken,
+    role: kid.role,
+  });
+};
 
 export const login = async (request, response) => {
   try {
-    const { email, password } = request.body;
+    const { id, password } = request.body;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const isEmail = emailRegex.test(id);
 
-    // Check if the email exists in a case-insensitive manner
-    const user = await userSchema.findOne({
-      email: { $regex: new RegExp(`^${email}$`, "i") },
-    });
-
-    if (!user) {
-      throw new Error("Invalid user & password");
+    if (isEmail) {
+      await PARENTLOGIN(id, password, response);
+    } else {
+      await KIDLOGIN(id, password, response);
     }
-
-    // Verify the provided password against the stored hash
-    const passwordMatch = await bcrypt.compare(password, user.password);
-
-    if (!passwordMatch) {
-      throw new Error("Invalid user & password");
-    }
-
-    let refreshTokenDocument = await refreshTokenSchema.findOne({
-      userId: user._id,
-    });
-
-    if (!refreshTokenDocument) {
-      // If a refreshToken document does not exist, generate new token and refreshToken
-      const token = setUser(user);
-      // Save the new refreshToken in the refreshTokenSchema
-      refreshTokenDocument = new refreshTokenSchema({
-        userId: user._id,
-        refreshToken: token,
-        token: token,
-      });
-      await refreshTokenDocument.save();
-    }
-
-    // check token expired or not
-    // const user123 = jwt.verify(refreshTokenDocument.token, SECRET_KEY, (error, response) => {
-    //   console.log(error);
-    //   console.log("here---------------------");
-    //   console.log(response)
-    // });
-
-    // Generate refresh token
-    response.cookie("token", refreshTokenDocument.token);
-    response.cookie("refreshToken", refreshTokenDocument.refreshToken);
-    response.status(200).json({
-      success: true,
-      message: "You have successfully logged in",
-      token: refreshTokenDocument.token,
-      refreshToken: refreshTokenDocument.refreshToken,
-    });
   } catch (error) {
     console.error("Login error:", error);
     response.status(400).json({ error: error.message });
@@ -662,5 +716,49 @@ export const deleteUser = async (request, response) => {
     });
   } catch (error) {
     response.status(400).json({ success: false, error: error.message });
+  }
+};
+
+// PROFILE GET /
+
+export const getParentKids = async (userId) => {
+  try {
+    const details = await kidSchema.find({ userId }).select('name');
+    return details;
+  } catch (error) {
+    // Throw an error to be caught and handled by the calling function
+    throw new Error("Kids not found");
+  }
+};
+
+export const getProfile = async (request, response) => {
+  const id = request.params.id;
+
+  try {
+    const userDetails = await userSchema.findById(id);
+
+    if (!userDetails) {
+      return response.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    const parentKids = await getParentKids(userDetails._id);
+
+    response.status(200).json({
+      success: true,
+      message: "Successful",
+      data: {
+        userDetails,
+        parentKids,
+      },
+    });
+  } catch (error) {
+    response.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message,
+    });
   }
 };

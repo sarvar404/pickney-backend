@@ -21,7 +21,6 @@ export function setUser(user) {
   const expirationTime = 120;
   return jwt.sign({
     _id: user._id,
-    email: user.email
   }, SECRET_KEY, { expiresIn: "120s" });
 }
 // expiresIn: "10h" // it will be expired after 10 hours

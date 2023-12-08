@@ -8,19 +8,16 @@ const kidSchema = new mongoose.Schema(
       ref: userTb, // Reference to the user schema
       required: true,
     },
-    kidId: {
-      type: String,
-    },
     name: {
       type: String,
       required: true,
     },
-    password: {
+    email: {
       type: String,
       required: true,
     },
     dob: {
-      type: Date,
+      type: String,
     },
     gender: {
       type: String,

@@ -11,6 +11,7 @@ import fs from "fs";
 import cookieParser from "cookie-parser";
 import Connection from "./database/db.js";
 import multer from "multer";
+import azure from 'azure-storage';
 
 // external imports
 // import userRouter from "./routes/users.js"
@@ -20,6 +21,7 @@ import tagsRouter from "./routes/tags.js";
 import devicesRouter from "./routes/devices.js";
 import usersRouter from "./routes/users.js";
 import kidsRouter from "./routes/kids.js";
+import { KidsImage } from "./storageFileEnums.js";
 
 const upload = multer({
   dest: "uploads/",
@@ -61,6 +63,143 @@ app.use('/api', tagsRouter);
 app.use('/api', devicesRouter);
 app.use('/api', usersRouter);
 app.use('/api', kidsRouter);
+
+
+// Uploading APIs
+const storageAccountName = process.env.AZURE_STORAGE_ACCOUNT_NAME;
+const storageAccountKey = process.env.AZURE_STORAGE_ACCOUNT_KEY;
+const containerName = KidsImage; // Replace with your container name
+const blobService = azure.createBlobService(storageAccountName, storageAccountKey);
+
+app.post('/api/upload', upload.single('image'), (req, res) => {
+  try {
+    const blobName = generateBlobName(req.file.originalname);
+    const stream = fs.createReadStream(req.file.path);
+    const streamLength = req.file.size;
+
+    // Set the content type of the blob
+    const options = {
+      contentSettings: {
+        contentType: req.file.mimetype,
+      },
+    };
+
+    blobService.createBlockBlobFromStream(
+      containerName,
+      blobName,
+      stream,
+      streamLength,
+      options,
+      (error, result, response) => {
+        if (!error) {
+          // Generate a SAS token with read permission
+          const startDate = new Date();
+          const expiryDate = new Date(startDate);
+          expiryDate.setMinutes(startDate.getMinutes() + 30); // Set the expiration time to 30 minutes from now
+
+          const sharedAccessPolicy = {
+            AccessPolicy: {
+              Permissions: azure.BlobUtilities.SharedAccessPermissions.READ,
+              Start: startDate,
+              Expiry: expiryDate,
+            },
+          };
+
+          const sasToken = blobService.generateSharedAccessSignature(
+            containerName,
+            blobName,
+            sharedAccessPolicy
+          );
+
+          // Construct the URL with the SAS token
+          const imageUrl = blobService.getUrl(containerName, blobName, sasToken);
+
+          return res.status(200).json({ success: true, message: 'File uploaded successfully', imageUrl });
+        } else {
+          return res.status(500).json({ success: false, message: 'Failed to upload file', error: error.message });
+        }
+      }
+    );
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Internal server error', error: error.message });
+  }
+});
+app.post('/api/upload/events', upload.array('images', 10), async (req, res) => {
+  try {
+    const files = req.files;
+    console.log(files);
+    process.exit();
+
+    const uploadPromises = files.map(async (file) => {
+      const blobName = generateBlobName(file.originalname);
+      const stream = fs.createReadStream(file.path);
+      const streamLength = file.size;
+
+      const options = {
+        contentSettings: {
+          contentType: file.mimetype,
+        },
+      };
+
+      return new Promise((resolve, reject) => {
+        blobService.createBlockBlobFromStream(
+          containerName,
+          blobName,
+          stream,
+          streamLength,
+          options,
+          (error, result, response) => {
+            // Cleanup the temporary file after uploading
+            fs.unlink(file.path, (unlinkError) => {
+              if (unlinkError) {
+                console.error('Error deleting temporary file:', unlinkError);
+              }
+            });
+
+            if (!error) {
+              const startDate = new Date();
+              const expiryDate = new Date(startDate);
+              expiryDate.setMinutes(startDate.getMinutes() + 30);
+
+              const sharedAccessPolicy = {
+                AccessPolicy: {
+                  Permissions: azure.BlobUtilities.SharedAccessPermissions.READ,
+                  Start: startDate,
+                  Expiry: expiryDate,
+                },
+              };
+
+              const sasToken = blobService.generateSharedAccessSignature(
+                containerName,
+                blobName,
+                sharedAccessPolicy
+              );
+
+              const imageUrl = blobService.getUrl(containerName, blobName, sasToken);
+              resolve({ success: true, message: 'File uploaded successfully', imageUrl });
+            } else {
+              reject({ success: false, message: 'Failed to upload file', error: error.message });
+            }
+          }
+        );
+      });
+    });
+
+    const results = await Promise.all(uploadPromises);
+    res.status(200).json(results);
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Internal server error', error: error.message });
+  }
+});
+
+
+
+function generateBlobName(originalName) {
+  const timestamp = new Date().getTime();
+  return `${timestamp}_${originalName}`;
+}
+
+
 
 app.listen(PORT, () => {
   Connection();

@@ -1,7 +1,17 @@
 import kidSchema from "../model/kidSchema.js";
+import userSchema from "../model/userSchema.js";
 import refreshTokenKidsSchema from "../model/refreshTokenKidsSchema.js";
 import { setKids } from "../service/auth.js";
 import bcrypt from "bcrypt";
+import {
+  code200,
+  code201,
+  code400,
+  code404,
+  code500,
+} from "../responseCode.js";
+import { KID, PARENT } from "../contentId.js";
+import { trimVal } from "../validation/trim.js";
 
 // Function to generate a random string of specified length
 const generateKidId = async (length) => {
@@ -23,23 +33,107 @@ const generateKidId = async (length) => {
   return kidId;
 };
 
+const addKidToUser = async (loginData, password, uniqueId, kidFK) => {
+  try {
+    // Check if the email already exists in userSchema
+    const existingUser = await userSchema.findOne({
+      email: loginData.email,
+    });
+
+    if (existingUser) {
+      throw new Error("Email already exists");
+    }
+
+    const userData = {
+      name: loginData.name,
+      email: loginData.email,
+      guardian: "EMPTY",
+      password: password,
+      photo: loginData.photo,
+      verified: true,
+      kidFK: kidFK,
+      uniqueId: uniqueId,
+      role: KID,
+    };
+
+    const savedUser = await userSchema.create(userData);
+
+    return savedUser; // Return the saved user data
+  } catch (error) {
+    // The error will be caught and handled in the higher-level function (kidRegister)
+    throw new Error(`Failed to add kid to user: ${error.message}`);
+  }
+};
+
+
+export const updateKidToUser = async (loginData, password,kidFK) => {
+  try {
+// console.log(kidFK);
+// process.exit();
+    const existingUser = await userSchema.findOne({
+      email: loginData.email,
+    });
+
+    if (existingUser) {
+      throw new Error("Email already exists");
+    }
+
+    const update = {
+      name: loginData.name,
+      email: loginData.email,
+      guardian: "EMPTY",
+      password: password,
+      photo: loginData.photo,
+      verified: true,
+      kidFK: kidFK,
+      uniqueId: undefined,
+      role: KID,
+    };
+
+    const options = {
+      new: true,
+    };
+
+    const savedUser = await userSchema.findOneAndUpdate(
+      { 
+        kidFK : kidFK
+      }, 
+      update, options);
+
+    return savedUser;
+  } catch (error) {
+    throw new Error(`Failed to update/add kid to user: ${error.message}`);
+  }
+};
+
+
 export const kidRegister = async (request, response) => {
   try {
-    if (request.body.password !== request.body.confirmPassword) {
+    // Check if the email already exists
+    const existingKid = await kidSchema.findOne({
+      email: request.body.email,
+    });
+
+    if (existingKid) {
       return response.status(400).json({
+        code: code400,
         success: false,
-        message: "Password and confirm password do not match",
+        message: "Email already exists",
       });
     }
-    const kidId = await generateKidId(6);
+
+    // Generate a unique kidId
+    const kidId = (await generateKidId(8)).toUpperCase();
+
+    // Hash the password
     const saltRounds = 10;
     const passwordHash = await bcrypt.hash(request.body.password, saltRounds);
 
+    // Kid data
     const loginData = {
-      kidId: kidId,
       userId: request.body.userId,
-      name: request.body.name,
-      password: passwordHash,
+      name: await trimVal(request.body.name),
+      email: request.body.email,
       dob: request.body.dob,
       gender: request.body.gender,
       address: request.body.address,
@@ -47,20 +141,122 @@ export const kidRegister = async (request, response) => {
       photo: request.body.photo,
     };
 
-    const kids = await kidSchema.create(loginData);
+    // Create a new kid
+    const newKid = await kidSchema.create(loginData);
 
-    response.status(201).json({
+    if (newKid) {
+      // Add kid to user
+      const savedUser = await addKidToUser(
+        loginData,
+        passwordHash,
+        kidId,
+        newKid._id
+      );
+
+      return response.status(201).json({
+        code: code201,
+        success: true,
+        message: "Kid added successfully",
+        id: savedUser.uniqueId,
+      });
+    } else {
+      return response.status(400).json({
+        code: code400,
+        success: false,
+        message: "Failed to add kid",
+      });
+    }
+  } catch (error) {
+    return response.status(400).json({
+      code: code400,
+      success: false,
+      error: error.message,
+    });
+  }
+};
+
+export const kidUpdate = async (request, response) => {
+  const kidId = request.params.id;
+
+  try {
+    // Find the existing kid by ID
+    const existingKid = await kidSchema.findById(kidId);
+
+    if (!existingKid) {
+      return response.status(404).json({
+        code: code404,
+        success: false,
+        message: "Kid not found",
+      });
+    }
+
+    // Check if the email is being updated to an existing email
+    if (request.body.email && request.body.email !== existingKid.email) {
+      const emailExists = await kidSchema.findOne({
+        email: request.body.email,
+      });
+
+      if (emailExists) {
+        return response.status(400).json({
+          code: code400,
+          success: false,
+          message: "Email already exists",
+        });
+      }
+    }
+
+    // Create an update object
+    const update = {
+      $set: {
+        name: (await trimVal(request.body.name)) || existingKid.name,
+        email: request.body.email || existingKid.email,
+        dob: request.body.dob || existingKid.dob,
+        gender: request.body.gender || existingKid.gender,
+        address: request.body.address || existingKid.address,
+        relation: request.body.relation || existingKid.relation,
+        photo: request.body.photo || existingKid.photo,
+      },
+    };
+
+    // Update password only if there is an incoming value for it
+    let upComingPassword = undefined;
+    if (request.body.password) {
+      const saltRounds = 10;
+      const passwordHash = await bcrypt.hash(request.body.password, saltRounds);
+      upComingPassword = passwordHash;
+    }
+
+    // Save the updated kid and update the associated user
+    const updatedKid = await kidSchema.findByIdAndUpdate(kidId, update, {
+      new: true,
+    });
+
+    // Call the function to update/add kid to the user
+    await updateKidToUser(
+      updatedKid,
+      upComingPassword,
+      kidId
+    );
+
+    response.status(200).json({
+      code: code200,
       success: true,
-      message: "Kid Added successfully",
-      id: kids.kidId,
+      message: "Kid updated successfully",
+      data: updatedKid,
     });
   } catch (error) {
-    response.status(400).json({ success: false, error: error.message });
+    response.status(500).json({
+      code: code500,
+      success: false,
+      message: "Internal server error",
+      error: error.message,
+    });
   }
 };
 
 export const kidLogin = async (request, response) => {
   try {
+    return false;
     const { kidId, password } = request.body;
 
     // Check if the email exists in a case-insensitive manner
@@ -122,7 +318,9 @@ export const refreshToken = async (request, response) => {
     const { refreshToken } = request.body;
 
     // Check if the provided refresh token exists in MongoDB
-    const refreshTokenDoc = await refreshTokenKidsSchema.findOne({ refreshToken });
+    const refreshTokenDoc = await refreshTokenKidsSchema.findOne({
+      refreshToken,
+    });
     if (!refreshTokenDoc) {
       throw new Error("Invalid refresh token");
     }
