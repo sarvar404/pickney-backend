@@ -11,7 +11,7 @@ import fs from "fs";
 import cookieParser from "cookie-parser";
 import Connection from "./database/db.js";
 import multer from "multer";
-import azure from 'azure-storage';
+import azure from "azure-storage";
 
 // external imports
 // import userRouter from "./routes/users.js"
@@ -21,7 +21,7 @@ import tagsRouter from "./routes/tags.js";
 import devicesRouter from "./routes/devices.js";
 import usersRouter from "./routes/users.js";
 import kidsRouter from "./routes/kids.js";
-import { KidsImage } from "./storageFileEnums.js";
+import { EventsImage, KidsImage } from "./storageFileEnums.js";
 
 const upload = multer({
   dest: "uploads/",
@@ -57,21 +57,23 @@ app.get("/", async (request, response) => {
   response.send("Cookies cleared and APIs working");
 });
 
-app.use('/api', eventsRouter);
-app.use('/api', activitiesRouter);
-app.use('/api', tagsRouter);
-app.use('/api', devicesRouter);
-app.use('/api', usersRouter);
-app.use('/api', kidsRouter);
-
+app.use("/api", eventsRouter);
+app.use("/api", activitiesRouter);
+app.use("/api", tagsRouter);
+app.use("/api", devicesRouter);
+app.use("/api", usersRouter);
+app.use("/api", kidsRouter);
 
 // Uploading APIs
 const storageAccountName = process.env.AZURE_STORAGE_ACCOUNT_NAME;
 const storageAccountKey = process.env.AZURE_STORAGE_ACCOUNT_KEY;
-const containerName = KidsImage; // Replace with your container name
-const blobService = azure.createBlobService(storageAccountName, storageAccountKey);
+// const containerName = KidsImage; // Replace with your container name
+const blobService = azure.createBlobService(
+  storageAccountName,
+  storageAccountKey
+);
 
-app.post('/api/upload', upload.single('image'), (req, res) => {
+app.post("/api/upload/kid-profile", upload.single("ps-img"), (req, res) => {
   try {
     const blobName = generateBlobName(req.file.originalname);
     const stream = fs.createReadStream(req.file.path);
@@ -85,7 +87,7 @@ app.post('/api/upload', upload.single('image'), (req, res) => {
     };
 
     blobService.createBlockBlobFromStream(
-      containerName,
+      KidsImage,
       blobName,
       stream,
       streamLength,
@@ -106,29 +108,43 @@ app.post('/api/upload', upload.single('image'), (req, res) => {
           };
 
           const sasToken = blobService.generateSharedAccessSignature(
-            containerName,
+            KidsImage,
             blobName,
             sharedAccessPolicy
           );
 
           // Construct the URL with the SAS token
-          const imageUrl = blobService.getUrl(containerName, blobName, sasToken);
+          const imageUrl = blobService.getUrl(
+            KidsImage,
+            blobName,
+            sasToken
+          );
 
-          return res.status(200).json({ success: true, message: 'File uploaded successfully', imageUrl });
+          return res.status(200).json({
+            success: true,
+            message: "File uploaded successfully",
+            imageUrl,
+          });
         } else {
-          return res.status(500).json({ success: false, message: 'Failed to upload file', error: error.message });
+          return res.status(500).json({
+            success: false,
+            message: "Failed to upload file",
+            error: error.message,
+          });
         }
       }
     );
   } catch (error) {
-    return res.status(500).json({ success: false, message: 'Internal server error', error: error.message });
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message,
+    });
   }
 });
-app.post('/api/upload/events', upload.array('images', 10), async (req, res) => {
+app.post("/api/upload/events", upload.array("ps-img", 10), async (req, res) => {
   try {
     const files = req.files;
-    console.log(files);
-    process.exit();
 
     const uploadPromises = files.map(async (file) => {
       const blobName = generateBlobName(file.originalname);
@@ -143,7 +159,7 @@ app.post('/api/upload/events', upload.array('images', 10), async (req, res) => {
 
       return new Promise((resolve, reject) => {
         blobService.createBlockBlobFromStream(
-          containerName,
+          EventsImage,
           blobName,
           stream,
           streamLength,
@@ -152,7 +168,7 @@ app.post('/api/upload/events', upload.array('images', 10), async (req, res) => {
             // Cleanup the temporary file after uploading
             fs.unlink(file.path, (unlinkError) => {
               if (unlinkError) {
-                console.error('Error deleting temporary file:', unlinkError);
+                console.error("Error deleting temporary file:", unlinkError);
               }
             });
 
@@ -170,15 +186,29 @@ app.post('/api/upload/events', upload.array('images', 10), async (req, res) => {
               };
 
               const sasToken = blobService.generateSharedAccessSignature(
-                containerName,
+                EventsImage,
                 blobName,
                 sharedAccessPolicy
               );
 
-              const imageUrl = blobService.getUrl(containerName, blobName, sasToken);
-              resolve({ success: true, message: 'File uploaded successfully', imageUrl });
+              const imageUrl = blobService.getUrl(
+                EventsImage,
+                blobName,
+                sasToken
+              );
+              resolve({
+                success: true,
+                message: "File uploaded successfully",
+                filename: file.originalname,
+                imageUrl,
+              });
             } else {
-              reject({ success: false, message: 'Failed to upload file', error: error.message });
+              reject({
+                success: false,
+                message: "Failed to upload file",
+                error: error.message,
+                filename: file.originalname,
+              });
             }
           }
         );
@@ -186,21 +216,44 @@ app.post('/api/upload/events', upload.array('images', 10), async (req, res) => {
     });
 
     const results = await Promise.all(uploadPromises);
+
+    // Cleanup other files in the 'uploads' folder
+    cleanupTemporaryFiles();
+
     res.status(200).json(results);
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Internal server error', error: error.message });
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message,
+    });
   }
 });
-
-
 
 function generateBlobName(originalName) {
   const timestamp = new Date().getTime();
   return `${timestamp}_${originalName}`;
 }
 
+function cleanupTemporaryFiles() {
+  const uploadFolder = "uploads";
 
+  fs.readdir(uploadFolder, (err, files) => {
+    if (err) {
+      console.error("Error reading directory:", err);
+      return;
+    }
 
+    files.forEach((file) => {
+      const filePath = `${uploadFolder}/${file}`;
+      fs.unlink(filePath, (unlinkError) => {
+        if (unlinkError) {
+          console.error("Error deleting temporary file:", unlinkError);
+        }
+      });
+    });
+  });
+}
 app.listen(PORT, () => {
   Connection();
   console.log(`connection is on :: >> ${PORT}`);
