@@ -7,7 +7,6 @@ import {
   code200,
   code201,
   code400,
-  code404,
   code500,
 } from "../responseCode.js";
 import { KID, PARENT } from "../contentId.js";
@@ -184,7 +183,7 @@ export const kidUpdate = async (request, response) => {
 
     if (!existingKid) {
       return response.status(404).json({
-        code: code404,
+        code: code400,
         success: false,
         message: "Kid not found",
       });
@@ -246,7 +245,7 @@ export const kidUpdate = async (request, response) => {
     });
   } catch (error) {
     response.status(500).json({
-      code: code500,
+      code: code400,
       success: false,
       message: "Internal server error",
       error: error.message,
@@ -333,6 +332,6 @@ export const refreshToken = async (request, response) => {
       token: newAccessToken,
     });
   } catch (error) {
-    response.status(400).json({ error: error.message });
+    response.status(400).json({ errorCode : code400, error: error.message });
   }
 };

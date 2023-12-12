@@ -1,4 +1,5 @@
 import deviceSchema from "../model/deviceSchema.js";
+import { code400 } from "../responseCode.js";
 
 export const addDevice = async (request, response) => {
   // console.log(request.body);
@@ -20,7 +21,7 @@ export const addDevice = async (request, response) => {
       id: savedDevice.id,
     });
   } catch (error) {
-    response.status(400).json({ success: false, error: error.message });
+    response.status(400).json({ errorCode : code400, success: false, error: error.message });
   }
 };
 
@@ -55,7 +56,7 @@ export const updateDevice = async (request, response) => {
       updatedDevice,
     });
   } catch (error) {
-    response.status(400).json({ success: false, error: error.message });
+    response.status(400).json({ errorCode : code400, success: false, error: error.message });
   }
 };
 
@@ -77,6 +78,6 @@ export const deleteDevice = async (request, response) => {
       message: "Device deleted successfully",
     });
   } catch (error) {
-    response.status(400).json({ success: false, error: error.message });
+    response.status(400).json({ errorCode : code400, success: false, error: error.message });
   }
 };

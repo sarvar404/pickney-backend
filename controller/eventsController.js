@@ -1,6 +1,7 @@
 import eventSchema from "../model/eventSchema.js";
+import grantStarsSchema from "../model/grantStarsSchema.js";
 import dotenv from "dotenv";
-import { code201 } from "../responseCode.js";
+import { code201, code400 } from "../responseCode.js";
 
 dotenv.config();
 
@@ -8,6 +9,7 @@ export const addEvent = async (request, response) => {
   try {
     const eventData = {
       userId: request.body.userId,
+      kidId: request.body.kidId,
       name: request.body.name,
       stars: request.body.stars,
       event_type: request.body.event_type,
@@ -32,7 +34,7 @@ export const addEvent = async (request, response) => {
       id: savedEvent.id,
     });
   } catch (error) {
-    response.status(400).json({ success: false, error: error.message });
+    response.status(400).json({ errorCode : code400, success: false, error: error.message });
   }
 };
 
@@ -42,18 +44,15 @@ export const updateEvent = async (request, response) => {
     const eventId = request.params.id; // Assuming the ID is provided in the URL params
 
     const updatedEventData = {
-      name: request.body.name,
-      created_by: request.body.created_by,
       stars: request.body.stars,
-      type: request.body.type,
-      is_recurring: request.body.is_recurring,
-      frequency: request.body.frequency,
+      reward_type: request.body.reward_type,
       tags: request.body.tags,
+      is_auto_complete_event: request.body.is_auto_complete_event,
+      max_count: request.body.max_count,
       start_at: request.body.start_at,
       end_at: request.body.end_at,
       status: request.body.status,
-      is_auto_complete: request.body.is_auto_complete,
-      max_count: request.body.max_count,
+      photo: request.body.photo,
     };
 
     const updatedEvent = await eventSchema.findOneAndUpdate(
@@ -64,6 +63,7 @@ export const updateEvent = async (request, response) => {
 
     if (!updatedEvent) {
       return response.status(404).json({
+        errorCode : code400, 
         success: false,
         message: "Event not found",
       });
@@ -75,7 +75,7 @@ export const updateEvent = async (request, response) => {
       updatedEvent,
     });
   } catch (error) {
-    response.status(400).json({ success: false, error: error.message });
+    response.status(400).json({ errorCode : code400, success: false, error: error.message });
   }
 };
 
@@ -87,6 +87,7 @@ export const deleteEvent = async (request, response) => {
 
     if (!deletedEvent) {
       return response.status(404).json({
+        errorCode : code400, 
         success: false,
         message: "Event not found",
       });
@@ -97,6 +98,97 @@ export const deleteEvent = async (request, response) => {
       message: "Event deleted successfully"
     });
   } catch (error) {
-    response.status(400).json({ success: false, error: error.message });
+    response.status(400).json({ errorCode : code400, success: false, error: error.message });
   }
 };
+
+
+
+
+export const grantKid = async (request, response) => {
+  try {
+    const eventData = {
+      userId: request.body.userId,
+      kidId: request.body.kidId,
+      eventId: request.body.eventId,
+      selected_date: request.body.selected_date,
+      is_recurring: request.body.is_recurring,
+      select_event: request.body.select_event,
+      remarks: request.body.remarks,
+      select_value: request.body.is_recurring ? 0 : request.body.select_value || 0,
+      select_count: request.body.is_recurring ? 0 : request.body.select_count || 0,
+    };
+
+    const savedEvent = await grantStarsSchema.create(eventData);
+
+    response.status(201).json({
+      code: 201,
+      success: true,
+      message: "kid granted successfully",
+      id: savedEvent.id,
+    });
+  } catch (error) {
+    response.status(400).json({ code: 400, success: false, error: error.message });
+  }
+};
+
+export const updateGrantedKid = async (request, response) => {
+  try {
+    const eventId = request.params.id;
+
+    const updatedEventData = {
+      selected_date: request.body.selected_date,
+      is_recurring: request.body.is_recurring,
+      select_event: request.body.select_event,
+      remarks: request.body.remarks,
+      select_value: request.body.is_recurring ? 0 : request.body.select_value || 0,
+      select_count: request.body.is_recurring ? 0 : request.body.select_count || 0,
+    };
+
+    const updatedEvent = await grantStarsSchema.findOneAndUpdate(
+      { _id: eventId },
+      updatedEventData,
+      { new: true }
+    );
+
+    if (!updatedEvent) {
+      return response.status(404).json({
+        errorCode : code400, 
+        success: false,
+        message: "granted kid list not found",
+      });
+    }
+
+    response.status(200).json({
+      success: true,
+      message: "granted kid details update successfully",
+      updatedEvent,
+    });
+  } catch (error) {
+    response.status(400).json({ code: 400, success: false, error: error.message });
+  }
+};
+
+export const deleteGrantedKid = async (request, response) => {
+  try {
+    const eventId = request.params.id;
+
+    const deletedEvent = await grantStarsSchema.findByIdAndDelete(eventId);
+
+    if (!deletedEvent) {
+      return response.status(404).json({
+        errorCode : code400, 
+        success: false,
+        message: "granted kid list not found",
+      });
+    }
+
+    response.status(200).json({
+      success: true,
+      message: "granted kid details deleted successfully",
+    });
+  } catch (error) {
+    response.status(400).json({ code: 400, success: false, error: error.message });
+  }
+};
+

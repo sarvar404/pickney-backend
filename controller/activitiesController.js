@@ -5,7 +5,7 @@ export const addActivity = async (request, response) => {
   // process.exit();
   try {
     const activityData = {
-      event_id: request.body.event_id,
+      eventId: request.body.eventId,
       assigned_to: request.body.assigned_to,
       status: request.body.status,
       remarks: request.body.remarks,
@@ -22,7 +22,7 @@ export const addActivity = async (request, response) => {
       id: savedActivity.id,
     });
   } catch (error) {
-    response.status(400).json({ success: false, error: error.message });
+    response.status(400).json({ errorCode : 400, success: false, error: error.message });
   }
 };
 
@@ -31,7 +31,7 @@ export const updateActivity = async (request, response) => {
     const activityId = request.params.id;
 
     const updatedActivityData = {
-      event_id: request.body.event_id,
+      eventId: request.body.eventId,
       assigned_to: request.body.assigned_to,
       status: request.body.status,
       remarks: request.body.remarks,
@@ -59,7 +59,7 @@ export const updateActivity = async (request, response) => {
       updatedActivity,
     });
   } catch (error) {
-    response.status(400).json({ success: false, error: error.message });
+    response.status(400).json({ errorCode : 400, success: false, error: error.message });
   }
 };
 
@@ -81,6 +81,6 @@ export const deleteActivity = async (request, response) => {
       message: "Activity deleted successfully",
     });
   } catch (error) {
-    response.status(400).json({ success: false, error: error.message });
+    response.status(400).json({ errorCode : 400, success: false, error: error.message });
   }
 };

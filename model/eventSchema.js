@@ -1,11 +1,16 @@
 import mongoose from "mongoose";
-import { eventTb, userTb } from "../tbEnums.js";
+import { eventTb, kidTb, userTb } from "../tbEnums.js";
 
 const eventSchema = new mongoose.Schema(
   {
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: userTb, // Reference to the user schema
+      required: true,
+    },
+    kidId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: kidTb, // Reference to the user schema
       required: true,
     },
     name: {

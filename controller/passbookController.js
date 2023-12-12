@@ -1,37 +1,43 @@
-import activitySchema from "../model/activitySchema.js";
+import passbookSchema from "../model/passbookSchema.js";
 
-export const addActivity = async (request, response) => {
-  // console.log(request.body);
-  // process.exit();
+const handleErrorResponse = (response, status, message) => {
+  return response.status(status).json({ success: false, error: message });
+};
+
+export const addPassbook = async (request, response) => {
   try {
-    const activityData = {
-      event_id: request.body.event_id,
-      assigned_to: request.body.assigned_to,
+    const passbookData = {
+      userId: request.body.userId,
+      eventId: request.body.eventId,
+      activityId: request.body.activityId,
+      entryId: request.body.entryId,
+      entryType: request.body.entryType,
       status: request.body.status,
       remarks: request.body.remarks,
       start_at: request.body.start_at,
       end_at: request.body.end_at,
       photo: request.body.photo,
+      photo: request.body.photo,
     };
 
-    const savedActivity = await activitySchema.create(activityData);
+    const savedPassbook = await passbookSchema.create(passbookData);
 
     response.status(201).json({
       success: true,
-      message: "Activity created successfully",
-      id: savedActivity.id,
+      message: "Passbook created successfully",
+      id: savedPassbook.id,
     });
   } catch (error) {
-    response.status(400).json({ success: false, error: error.message });
+    handleErrorResponse(response, 400, error.message);
   }
 };
 
-export const updateActivity = async (request, response) => {
+export const updatePassbook = async (request, response) => {
   try {
-    const activityId = request.params.id;
+    const passbookId = request.params.id;
 
-    const updatedActivityData = {
-      event_id: request.body.event_id,
+    const updatedPassbookData = {
+      eventId: request.body.eventId,
       assigned_to: request.body.assigned_to,
       status: request.body.status,
       remarks: request.body.remarks,
@@ -40,47 +46,41 @@ export const updateActivity = async (request, response) => {
       photo: request.body.photo,
     };
 
-    const updatedActivity = await activitySchema.findOneAndUpdate(
-      { _id: activityId },
-      updatedActivityData,
+    const updatedPassbook = await passbookSchema.findOneAndUpdate(
+      { _id: passbookId },
+      updatedPassbookData,
       { new: true }
     );
 
-    if (!updatedActivity) {
-      return response.status(404).json({
-        success: false,
-        message: "Activity not found",
-      });
+    if (!updatedPassbook) {
+      return handleErrorResponse(response, 404, "Passbook entry not found");
     }
 
     response.status(200).json({
       success: true,
-      message: "Activity updated successfully",
-      updatedActivity,
+      message: "Passbook updated successfully",
+      updatedPassbook,
     });
   } catch (error) {
-    response.status(400).json({ success: false, error: error.message });
+    handleErrorResponse(response, 400, error.message);
   }
 };
 
-export const deleteActivity = async (request, response) => {
+export const deletePassbook = async (request, response) => {
   try {
-    const activityId = request.params.id;
+    const passbookId = request.params.id;
 
-    const deletedActivity = await activitySchema.findByIdAndDelete(activityId);
+    const deletedPassbook = await passbookSchema.findByIdAndDelete(passbookId);
 
-    if (!deletedActivity) {
-      return response.status(404).json({
-        success: false,
-        message: "Activity not found",
-      });
+    if (!deletedPassbook) {
+      return handleErrorResponse(response, 404, "Passbook not found");
     }
 
     response.status(200).json({
       success: true,
-      message: "Activity deleted successfully",
+      message: "Passbook deleted successfully",
     });
   } catch (error) {
-    response.status(400).json({ success: false, error: error.message });
+    handleErrorResponse(response, 400, error.message);
   }
 };

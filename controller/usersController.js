@@ -15,7 +15,7 @@ import { generateOTP } from "../service/generateOTP.js";
 import nodemailer from "nodemailer";
 import { Vonage } from "@vonage/server-sdk";
 import { KID, PARENT } from "../contentId.js";
-import { code404 } from "../responseCode.js";
+import { code400 } from "../responseCode.js";
 
 const vonage = new Vonage({
   apiKey: process.env.VONAGE_API_KEY,
@@ -330,7 +330,7 @@ export const reSetPassword = expressAsyncHandler(async (request, response) => {
 //       requestId, // Optionally, you can include the requestId in the response
 //     });
 //   } catch (error) {
-//     response.status(400).json({ error: error.message });
+//     response.status(400).json({ errorCode : code400, error: error.message });
 //   }
 // };
 
@@ -605,7 +605,7 @@ const KIDLOGIN = async (uniqueId, password, response) => {
 
   if (!kid) {
     return response.status(404).json({
-      code: code404,
+      code: code400,
       success: false,
       message: "Invalid User Id",
     });
@@ -615,7 +615,7 @@ const KIDLOGIN = async (uniqueId, password, response) => {
 
   if (!passwordMatch) {
     return response.status(404).json({
-      code: code404,
+      code: code400,
       success: false,
       message: "Invalid User Password",
     });
@@ -660,7 +660,7 @@ export const login = async (request, response) => {
     }
   } catch (error) {
     console.error("Login error:", error);
-    response.status(400).json({ error: error.message });
+    response.status(400).json({ errorCode : code400, error: error.message });
   }
 };
 
@@ -682,7 +682,7 @@ export const refreshToken = async (request, response) => {
       token: newAccessToken,
     });
   } catch (error) {
-    response.status(400).json({ error: error.message });
+    response.status(400).json({ errorCode : code400, error: error.message });
   }
 };
 export const accessTrue = async (request, response) => {
@@ -693,7 +693,7 @@ export const accessTrue = async (request, response) => {
     });
   } catch (error) {
     console.log(error, "inside controller ->...................");
-    response.status(400).json({ error: error.message });
+    response.status(400).json({ errorCode : code400, error: error.message });
   }
 };
 
@@ -715,7 +715,7 @@ export const deleteUser = async (request, response) => {
       message: "User deleted successfully",
     });
   } catch (error) {
-    response.status(400).json({ success: false, error: error.message });
+    response.status(400).json({ success: false, errorCode : code400, error: error.message });
   }
 };
 
@@ -758,7 +758,7 @@ export const getProfile = async (request, response) => {
     response.status(500).json({
       success: false,
       message: "Internal server error",
-      error: error.message,
+      errorCode : code400, error: error.message,
     });
   }
 };

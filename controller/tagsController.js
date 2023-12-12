@@ -1,4 +1,5 @@
 import tagSchema from "../model/tagSchema.js";
+import { code400 } from "../responseCode.js";
 
 export const addTag = async (request, response) => {
   // console.log(request.body);
@@ -17,7 +18,7 @@ export const addTag = async (request, response) => {
       id: savedTag.id,
     });
   } catch (error) {
-    response.status(400).json({ success: false, error: error.message });
+    response.status(400).json({ errorCode : code400, success: false, error: error.message });
   }
 };
 
@@ -49,7 +50,7 @@ export const updateTag = async (request, response) => {
       updatedTag,
     });
   } catch (error) {
-    response.status(400).json({ success: false, error: error.message });
+    response.status(400).json({ errorCode : code400, success: false, error: error.message });
   }
 };
 
@@ -71,6 +72,6 @@ export const deleteTag = async (request, response) => {
       message: "Tag deleted successfully",
     });
   } catch (error) {
-    response.status(400).json({ success: false, error: error.message });
+    response.status(400).json({ errorCode : code400, success: false, error: error.message });
   }
 };

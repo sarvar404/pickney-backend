@@ -3,6 +3,16 @@ import { activitiesTb, passbookTb, userTb } from "../tbEnums.js";
 
 const passbookSchema = new mongoose.Schema(
   {
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: userTb, // Reference to the user schema
+      required: true,
+    },
+    eventId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: eventTb, // Reference to the user schema
+      required: true,
+    },
     activityId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: activitiesTb, // Reference to the user schema
@@ -17,15 +27,10 @@ const passbookSchema = new mongoose.Schema(
       enum: Object.values(entryTypeEnums), // Assuming entryTypeEnums contains valid entry types
       required: true,
     },
-    userId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: userTb, // Reference to the user schema
-      required: true,
-    },
     status: {
       type: String,
-      enum: Object.values(entryStatusEnums), // Assuming entryStatusEnums contains valid status values
       required: true,
+      default: true
     },
     remarks: {
       type: String,

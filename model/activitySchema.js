@@ -3,7 +3,7 @@ import { activitiesTb, eventTb } from "../tbEnums.js";
 
 const activitySchema = new mongoose.Schema(
   {
-    event_id: {
+    eventId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: eventTb,
     },
