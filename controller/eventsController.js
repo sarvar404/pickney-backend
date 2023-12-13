@@ -202,7 +202,7 @@ export const getSingleEvent = async (request, response) => {
       data: details,
     });
   } catch (error) {
-    response.status(404).json({ errorCode: code400, success: false, message: error.message });
+    response.status(404).json({ errorCode: code400, success: false, error: error.message });
   }
 };
 
@@ -218,6 +218,6 @@ export const getAllEventList = async (request, response) => {
       data: details,
     });
   } catch (err) {
-    response.status(404).json({ errorCode: code400, success: false, message: "Not found" });
+    response.status(404).json({ errorCode: code400, success: false, error: "Not found" });
   }
 };

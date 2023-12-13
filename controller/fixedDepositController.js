@@ -13,7 +13,7 @@ export const getFixedDeposit = async (request, response) => {
       data: details,
     });
   } catch (error) {
-    response.status(404).json({ errorCode : code400, success: false, message: error });
+    response.status(404).json({ errorCode : code400, success: false, error: error });
   }
 };
 

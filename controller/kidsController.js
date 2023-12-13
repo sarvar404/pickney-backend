@@ -117,7 +117,7 @@ export const kidRegister = async (request, response) => {
       return response.status(400).json({
         code: code400,
         success: false,
-        message: "Email already exists",
+        error: "Email already exists",
       });
     }
 
@@ -162,7 +162,7 @@ export const kidRegister = async (request, response) => {
       return response.status(400).json({
         code: code400,
         success: false,
-        message: "Failed to add kid",
+        error: "Failed to add kid",
       });
     }
   } catch (error) {
@@ -185,7 +185,7 @@ export const kidUpdate = async (request, response) => {
       return response.status(404).json({
         code: code400,
         success: false,
-        message: "Kid not found",
+        error: "Kid not found",
       });
     }
 
@@ -199,7 +199,7 @@ export const kidUpdate = async (request, response) => {
         return response.status(400).json({
           code: code400,
           success: false,
-          message: "Email already exists",
+          error: "Email already exists",
         });
       }
     }
@@ -247,8 +247,7 @@ export const kidUpdate = async (request, response) => {
     response.status(500).json({
       code: code400,
       success: false,
-      message: "Internal server error",
-      error: error.message,
+      error: "Internal server error"
     });
   }
 };

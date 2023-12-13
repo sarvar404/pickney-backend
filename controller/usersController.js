@@ -86,7 +86,7 @@ export const OTPVerification = expressAsyncHandler(
           console.error(error);
           return response
             .status(500)
-            .json({ success: false, message: "Failed to send OTP email" });
+            .json({ success: false, error: "Failed to send OTP email" });
         } else {
           // console.log('Email sent successfully!');
           setTimeout(async () => {
@@ -208,7 +208,7 @@ export const forgotAndGetOTP = expressAsyncHandler(
           console.error(error);
           return response
             .status(500)
-            .json({ success: false, message: "Failed to send OTP email" });
+            .json({ success: false, error: "Failed to send OTP email" });
         } else {
           // console.log('Email sent successfully!');
           setTimeout(async () => {
@@ -394,7 +394,7 @@ export const registration = expressAsyncHandler(async (request, response) => {
 
           return response
             .status(500)
-            .json({ success: false, message: "Failed to send OTP email" });
+            .json({ success: false, error: "Failed to send OTP email" });
         } else {
           // console.log('Email sent successfully!');
           setTimeout(async () => {
