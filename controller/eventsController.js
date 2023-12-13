@@ -103,8 +103,6 @@ export const deleteEvent = async (request, response) => {
 };
 
 
-
-
 export const grantKid = async (request, response) => {
   try {
     const eventData = {
@@ -128,7 +126,7 @@ export const grantKid = async (request, response) => {
       id: savedEvent.id,
     });
   } catch (error) {
-    response.status(400).json({ code: 400, success: false, error: error.message });
+    response.status(400).json({ errorCode : code400, success: false, error: error.message });
   }
 };
 
@@ -165,7 +163,7 @@ export const updateGrantedKid = async (request, response) => {
       updatedEvent,
     });
   } catch (error) {
-    response.status(400).json({ code: 400, success: false, error: error.message });
+    response.status(400).json({ errorCode : code400, success: false, error: error.message });
   }
 };
 
@@ -188,7 +186,38 @@ export const deleteGrantedKid = async (request, response) => {
       message: "granted kid details deleted successfully",
     });
   } catch (error) {
-    response.status(400).json({ code: 400, success: false, error: error.message });
+    response.status(400).json({ errorCode : code400, success: false, error: error.message });
   }
 };
 
+
+export const getSingleEvent = async (request, response) => {
+  const id = request.params.id;
+  try {
+    const details = await eventSchema.findById(id);
+    response.status(200).json({
+      code: code201,
+      success: true,
+      message: "Successful",
+      data: details,
+    });
+  } catch (error) {
+    response.status(404).json({ errorCode: code400, success: false, message: error.message });
+  }
+};
+
+export const getAllEventList = async (request, response) => {
+  try {
+    const details = await eventSchema.find();
+    const totalRecords = details.length;
+    response.status(200).json({
+      code: code201,
+      success: true,
+      message: "Successful",
+      totalRecords: totalRecords,
+      data: details,
+    });
+  } catch (err) {
+    response.status(404).json({ errorCode: code400, success: false, message: "Not found" });
+  }
+};

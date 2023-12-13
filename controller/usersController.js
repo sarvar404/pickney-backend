@@ -15,7 +15,7 @@ import { generateOTP } from "../service/generateOTP.js";
 import nodemailer from "nodemailer";
 import { Vonage } from "@vonage/server-sdk";
 import { KID, PARENT } from "../contentId.js";
-import { code400 } from "../responseCode.js";
+import { code201, code400 } from "../responseCode.js";
 
 const vonage = new Vonage({
   apiKey: process.env.VONAGE_API_KEY,
@@ -760,5 +760,22 @@ export const getProfile = async (request, response) => {
       message: "Internal server error",
       errorCode : code400, error: error.message,
     });
+  }
+};
+
+export const getAllProfiles = async (request, response) => {
+  try {
+    const details = await userSchema.find();
+    
+    const totalRecords = details.length;
+    response.status(200).json({
+      code: code201,
+      success: true,
+      message: "Successful",
+      totalRecords: totalRecords,
+      data: details,
+    });
+  } catch (err) {
+    response.status(404).json({ errorCode: code400, success: false, message: "Not found" });
   }
 };

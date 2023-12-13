@@ -45,6 +45,7 @@ export const updateDevice = async (request, response) => {
 
     if (!updatedDevice) {
       return response.status(404).json({
+        errorCode : code400,
         success: false,
         message: "Device not found",
       });
@@ -68,6 +69,7 @@ export const deleteDevice = async (request, response) => {
 
     if (!deletedDevice) {
       return response.status(404).json({
+        errorCode : code400,
         success: false,
         message: "Device not found",
       });

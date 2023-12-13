@@ -21,7 +21,12 @@ import tagsRouter from "./routes/tags.js";
 import devicesRouter from "./routes/devices.js";
 import usersRouter from "./routes/users.js";
 import kidsRouter from "./routes/kids.js";
-import { EventsImage, KidsImage } from "./storageFileEnums.js";
+import fixedDepositRouter from "./routes/fixed-deposit.js";
+import fixedDepositLogsRouter from "./routes/fixed-deposit-logs.js";
+import loanRouter from "./routes/loan.js";
+import loanLogsRouter from "./routes/loan-logs.js";
+import { EventsImage, commonImage } from "./storageFileEnums.js";
+import { authSecurityHeader } from "./middlewares/middlewareAuth.js";
 
 const upload = multer({
   dest: "uploads/",
@@ -63,17 +68,21 @@ app.use("/api", tagsRouter);
 app.use("/api", devicesRouter);
 app.use("/api", usersRouter);
 app.use("/api", kidsRouter);
+app.use("/api", fixedDepositRouter);
+app.use("/api", loanRouter);
+app.use("/api", loanLogsRouter);
+app.use("/api", fixedDepositLogsRouter);
 
 // Uploading APIs
 const storageAccountName = process.env.AZURE_STORAGE_ACCOUNT_NAME;
 const storageAccountKey = process.env.AZURE_STORAGE_ACCOUNT_KEY;
-// const containerName = KidsImage; // Replace with your container name
+// const containerName = commonImage; // Replace with your container name
 const blobService = azure.createBlobService(
   storageAccountName,
   storageAccountKey
 );
 
-app.post("/api/upload/kid-profile", upload.single("ps-img"), (req, res) => {
+app.post("/api/upload/common-profile",authSecurityHeader, upload.single("ps-img"), (req, res) => {
   try {
     const blobName = generateBlobName(req.file.originalname);
     const stream = fs.createReadStream(req.file.path);
@@ -87,7 +96,7 @@ app.post("/api/upload/kid-profile", upload.single("ps-img"), (req, res) => {
     };
 
     blobService.createBlockBlobFromStream(
-      KidsImage,
+      commonImage,
       blobName,
       stream,
       streamLength,
@@ -108,14 +117,14 @@ app.post("/api/upload/kid-profile", upload.single("ps-img"), (req, res) => {
           };
 
           const sasToken = blobService.generateSharedAccessSignature(
-            KidsImage,
+            commonImage,
             blobName,
             sharedAccessPolicy
           );
 
           // Construct the URL with the SAS token
           const imageUrl = blobService.getUrl(
-            KidsImage,
+            commonImage,
             blobName,
             sasToken
           );

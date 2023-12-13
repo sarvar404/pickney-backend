@@ -13,4 +13,8 @@ export const activitiesTb = "all_activities_sr01";
 export const tagsTb = "all_tags_sr01";
 export const devicesTb = "all_devices_sr01";
 export const passbookTb = "all_passbook_sr01";
+export const FDTb = "all_fixed_deposit_sr01";
+export const FDLogsTb = "all_fixed_deposit_logs_sr01";
+export const loanTb = "all_loan_sr01";
+export const loanLogsTb = "all_loan_logs_sr01";
 
