@@ -8,23 +8,12 @@ const passbookSchema = new mongoose.Schema(
       ref: userTb, // Reference to the user schema
       required: true,
     },
-    eventId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: eventTb, // Reference to the user schema
-      required: true,
-    },
-    activityId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: activitiesTb, // Reference to the user schema
-      required: true,
-    },
     entryId: {
       type: mongoose.Schema.Types.ObjectId,
       required: true,
     },
     entryType: {
       type: String,
-      enum: Object.values(entryTypeEnums), // Assuming entryTypeEnums contains valid entry types
       required: true,
     },
     status: {
@@ -48,8 +37,11 @@ const passbookSchema = new mongoose.Schema(
       type: Number,
       default: 0, // You can set a default value if needed
     },
+    is_credit: {
+      type: String,
+    },
   },
-  { timestamps: { createdAt: "created_at", updatedAt: "updated_at" } }
+  { timestamps: { createdAt: "created_at"} }
 );
 
 export default mongoose.model(passbookTb, passbookSchema);

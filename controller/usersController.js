@@ -766,7 +766,6 @@ export const getProfile = async (request, response) => {
 export const getAllProfiles = async (request, response) => {
   try {
     const details = await userSchema.find();
-    
     const totalRecords = details.length;
     response.status(200).json({
       code: code201,
@@ -776,6 +775,6 @@ export const getAllProfiles = async (request, response) => {
       data: details,
     });
   } catch (err) {
-    response.status(404).json({ errorCode: code400, success: false, message: "Not found" });
+    response.status(404).json({ errorCode: code400, success: false, error: "Not found" });
   }
 };

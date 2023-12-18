@@ -121,6 +121,14 @@ export const kidRegister = async (request, response) => {
       });
     }
 
+    const existingUser = await userSchema.findOne({
+      _id: request.body.userId,
+    });
+
+    if (existingUser.verified === false) {
+      throw new Error("Sorry, Invalid User");
+    }
+
     // Generate a unique kidId
     const kidId = (await generateKidId(8)).toUpperCase();
 

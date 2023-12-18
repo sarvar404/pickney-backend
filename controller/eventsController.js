@@ -1,4 +1,5 @@
 import eventSchema from "../model/eventSchema.js";
+import defaultEventSchema from "../model/defaultEventSchema.js";
 import grantStarsSchema from "../model/grantStarsSchema.js";
 import dotenv from "dotenv";
 import { code201, code400 } from "../responseCode.js";
@@ -221,3 +222,97 @@ export const getAllEventList = async (request, response) => {
     response.status(404).json({ errorCode: code400, success: false, error: "Not found" });
   }
 };
+
+// DEFAULT ................
+
+
+
+export const addEventDefault = async (request, response) => {
+  try {
+    const eventData = {
+      name: request.body.name,
+      points: request.body.points,
+      event_type: request.body.event_type,
+      is_recurring: request.body.is_recurring,
+      frequency: request.body.frequency,
+      tags: request.body.tags,
+      photo: request.body.photo,
+      is_recommended: request.body.is_recommended,
+      status: request.body.status,
+    };
+
+    const savedEvent = await defaultEventSchema.create(eventData);
+
+    response.status(201).json({
+      code: code201,
+      success: true,
+      message: "Event created successfully",
+      id: savedEvent.id,
+    });
+  } catch (error) {
+    response.status(400).json({ errorCode: code400, success: false, error: error.message });
+  }
+};
+
+export const updateEventDefault = async (request, response) => {
+  try {
+    const eventId = request.params.id; // Assuming the ID is provided in the URL params
+
+    const updatedEventData = {
+      points: request.body.points,
+      event_type: request.body.event_type,
+      is_recurring: request.body.is_recurring,
+      frequency: request.body.frequency,
+      tags: request.body.tags,
+      photo: request.body.photo,
+      is_recommended: request.body.is_recommended,
+      status: request.body.status,
+    };
+
+    const updatedEvent = await defaultEventSchema.findOneAndUpdate(
+      { _id: eventId },
+      updatedEventData,
+      { new: true }
+    );
+
+    if (!updatedEvent) {
+      return response.status(404).json({
+        errorCode: code400,
+        success: false,
+        message: "Event not found",
+      });
+    }
+
+    response.status(200).json({
+      success: true,
+      message: "Event updated successfully",
+      updatedEvent,
+    });
+  } catch (error) {
+    response.status(400).json({ errorCode: code400, success: false, error: error.message });
+  }
+};
+
+export const deleteEventDefault = async (request, response) => {
+  try {
+    const eventId = request.params.id; // Assuming the ID is provided in the URL params
+
+    const deletedEvent = await defaultEventSchema.findByIdAndDelete(eventId);
+
+    if (!deletedEvent) {
+      return response.status(404).json({
+        errorCode: code400,
+        success: false,
+        message: "Event not found",
+      });
+    }
+
+    response.status(200).json({
+      success: true,
+      message: "Event deleted successfully",
+    });
+  } catch (error) {
+    response.status(400).json({ errorCode: code400, success: false, error: error.message });
+  }
+};
+

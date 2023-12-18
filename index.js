@@ -12,6 +12,9 @@ import cookieParser from "cookie-parser";
 import Connection from "./database/db.js";
 import multer from "multer";
 import azure from "azure-storage";
+//
+import cron from "node-cron";
+import moment from "moment";
 
 // external imports
 // import userRouter from "./routes/users.js"
@@ -27,6 +30,9 @@ import loanRouter from "./routes/loan.js";
 import loanLogsRouter from "./routes/loan-logs.js";
 import { EventsImage, commonImage } from "./storageFileEnums.js";
 import { authSecurityHeader } from "./middlewares/middlewareAuth.js";
+import { addFixedDepositLog, addPassbook } from "./controller/fixedDepositController.js";
+import fixedDepositSchema from "./model/fixedDepositSchema.js";
+import { fdStatus_MATURED } from "./contentId.js";
 
 const upload = multer({
   dest: "uploads/",
@@ -267,3 +273,94 @@ app.listen(PORT, () => {
   Connection();
   console.log(`connection is on :: >> ${PORT}`);
 });
+
+
+// cron job
+
+// */2 * * * * // each two minutes
+// 0 0 * * * // 12 am of each day
+cron.schedule("*/2 * * * *", async () => {
+  try {
+    // console.log("get called");
+    // Get all fixed deposits whose maturity date is today or has already passed
+    const today = moment().format("MM/DD/YYYY");
+    const depositsToMature = await fixedDepositSchema.find({
+      $or: [
+        { end_at: today },
+        { end_at: { $lt: today } }, // Check for past dates
+      ],
+    });
+    // console.log(depositsToMature);
+
+    // Process each deposit to update status and perform additional actions
+    depositsToMature.forEach(async (deposit) => {
+      // Check if the fixed deposit is cancelled
+      if (deposit.status === "CANCELLED") {
+        // Update the status for addFixedDepositLog and addPassbook
+        const cancelledStatus = "CANCELLED";
+
+        // Add the fixed deposit to the logs
+        addFixedDepositLog(
+          {
+            fdId: deposit._id,
+            principal: deposit.principal,
+            status: cancelledStatus,
+          },
+          (logResponse) => {
+            // console.log(logResponse);
+          }
+        );
+
+        // Add an entry to the passbook
+        addPassbook(
+          {
+            userId: deposit.userId,
+            entryId: deposit._id,
+            status: cancelledStatus,
+            principal: deposit.principal,
+          },
+          (passbookResponse) => {
+            // console.log(passbookResponse);
+          }
+        );
+
+        // console.log(`Fixed Deposit ${deposit._id} is cancelled.`);
+      } else {
+        // Update the status of the fixed deposit
+        deposit.status = fdStatus_MATURED;
+        await deposit.save();
+
+        // Add the fixed deposit to the logs
+        addFixedDepositLog(
+          {
+            fdId: deposit._id,
+            principal: deposit.principal,
+            status: fdStatus_MATURED,
+          },
+          (logResponse) => {
+            // console.log(logResponse);
+          }
+        );
+
+        // Add an entry to the passbook
+        addPassbook(
+          {
+            userId: deposit.userId,
+            entryId: deposit._id,
+            status: deposit.status,
+            principal: deposit.principal,
+          },
+          (passbookResponse) => {
+            // console.log(passbookResponse);
+          }
+        );
+
+        // console.log(`Fixed Deposit ${deposit._id} has matured.`);
+      }
+    });
+  } catch (error) {
+    console.error("Cron Job Error:", error.message);
+  }
+});
+
+// ... (rest of your code)

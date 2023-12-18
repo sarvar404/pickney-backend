@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { FDTb, userTb } from "../tbEnums.js";
+import { FDTb, kidTb, userTb } from "../tbEnums.js";
 
 const fixedDepositSchema = new mongoose.Schema(
   {
@@ -8,14 +8,20 @@ const fixedDepositSchema = new mongoose.Schema(
       ref: userTb, // Reference to the user schema
       required: true,
     },
-    created_by: {
-      type: String, // You may need to adjust the type based on the actual data type
+    kidId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: kidTb, // Reference to the user schema
+      required: true,
     },
-    principal: {
+    stars: {
       type: Number,
       required: true,
     },
     interest: {
+      type: Number,
+      required: true,
+    },
+    principal: {
       type: Number,
       required: true,
     },
@@ -27,8 +33,8 @@ const fixedDepositSchema = new mongoose.Schema(
       type: Date,
     },
     status: {
-      type: Number,
-      enum: [1, 2, 3], // [ active, inactive, deleted]
+      type: String,
+      required: true,
     },
     remarks: {
       type: String,

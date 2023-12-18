@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import { FDLogsTb, FDTb } from "../tbEnums.js";
+import { cancel, matured } from "../contentId.js";
 
 const fixedDepositLogsSchema = new mongoose.Schema(
   {
@@ -10,7 +11,7 @@ const fixedDepositLogsSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["Pending", "Paid"],
+      enum: [cancel, matured],
       required: true,
     },
     amount: {

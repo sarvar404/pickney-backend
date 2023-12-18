@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { loanTb, userTb } from "../tbEnums.js";
+import { kidTb, loanTb, userTb } from "../tbEnums.js";
 
 const loanSchema = new mongoose.Schema(
   {
@@ -8,8 +8,10 @@ const loanSchema = new mongoose.Schema(
       ref: userTb, // Reference to the user schema
       required: true,
     },
-    created_by: {
-      type: String, // You may need to adjust the type based on the actual data type
+    kidId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: kidTb, // Reference to the user schema
+      required: true,
     },
     amount: {
       type: Number,
@@ -23,16 +25,16 @@ const loanSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
-    emi_star: {
-      type: Number,
-      required: true,
-    },
+    // emi_star: {
+    //   type: Number,
+    //   required: true,
+    // },
     ends_at: {
       type: Date,
     },
     status: {
-      type: Number,
-      enum: [1, 2, 3], // [ active, inactive, deleted]
+      type: String,
+      required : true,
     },
     remarks: {
       type: String,
