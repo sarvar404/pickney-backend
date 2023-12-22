@@ -765,7 +765,9 @@ export const getProfile = async (request, response) => {
 
 export const getAllProfiles = async (request, response) => {
   try {
-    const details = await userSchema.find();
+    // Filter records where role is "P"
+    const details = await userSchema.find({ role: "P" });
+
     const totalRecords = details.length;
     response.status(200).json({
       code: code201,
@@ -778,3 +780,4 @@ export const getAllProfiles = async (request, response) => {
     response.status(404).json({ errorCode: code400, success: false, error: "Not found" });
   }
 };
+
