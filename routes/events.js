@@ -7,7 +7,7 @@ dotenv.config();
 const router = express.Router();
 
 router.post("/events/add-event", authSecurityHeader, addEvent);
-router.put("/events/update-event/:id", authSecurityHeader, updateEvent);
+router.put("/events/update-event", authSecurityHeader, updateEvent);
 router.delete("/events/delete-event/:id", authSecurityHeader, deleteEvent);
 
 

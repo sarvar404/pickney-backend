@@ -11,8 +11,9 @@ dotenv.config();
 
 export const updateEvent = async (request, response) => {
   try {
-    const eventId = request.params.id; // Assuming the ID is provided in the URL params
-
+    // const eventId = request.params.id; // Assuming the ID is provided in the URL params
+    const eventId = request.body.id;
+    
     const existingActivities = await activitySchema.find({ eventId });
     if (existingActivities) {
       await activitySchema.deleteMany({ eventId });
