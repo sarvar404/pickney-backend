@@ -180,17 +180,36 @@ export const deleteGrantedKid = async (request, response) => {
 
 
 export const getSingleEvent = async (request, response) => {
-  const id = request.params.id;
+  const eventId = request.params.id;
+
   try {
-    const details = await eventSchema.findById(id);
+    // Find the event details
+    const eventDetails = await eventSchema.findById(eventId);
+
+    if (!eventDetails) {
+      return response.status(404).json({
+        errorCode: code400,
+        success: false,
+        message: "Event not found",
+      });
+    }
+
+    // Fetch activities based on the event ID
+    const activities = await activitySchema.find({ eventId });
+
     response.status(200).json({
       code: code201,
       success: true,
       message: "Successful",
-      data: details,
+      event: eventDetails,
+      activities,
     });
   } catch (error) {
-    response.status(404).json({ errorCode: code400, success: false, error: error.message });
+    response.status(500).json({
+      errorCode: code400,
+      success: false,
+      error: error.message,
+    });
   }
 };
 

@@ -28,17 +28,10 @@ export const addActivity = async (request, response) => {
 
 export const updateActivity = async (request, response) => {
   try {
-    return false;
     const activityId = request.params.id;
 
     const updatedActivityData = {
-      eventId: request.body.eventId,
-      assigned_to: request.body.assigned_to,
-      status: request.body.status,
-      remarks: request.body.remarks,
-      start_at: request.body.start_at,
-      end_at: request.body.end_at,
-      photo: request.body.photo,
+      status: request.body.status
     };
 
     const updatedActivity = await activitySchema.findOneAndUpdate(
