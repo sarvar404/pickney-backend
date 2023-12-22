@@ -69,14 +69,7 @@ export const updateKidToUser = async (loginData, password,kidFK) => {
   try {
 // console.log(kidFK);
 // process.exit();
-    const existingUser = await userSchema.findOne({
-      email: loginData.email,
-    });
-
-    if (existingUser) {
-      throw new Error("Email already exists");
-    }
-
+    
     const update = {
       name: loginData.name,
       email: loginData.email,
@@ -212,6 +205,18 @@ export const kidUpdate = async (request, response) => {
       }
     }
 
+    const existingUser = await userSchema.findOne({
+      email: request.body.email,
+    });
+
+    if (existingUser) {
+      return response.status(400).json({
+        code: code400,
+        success: false,
+        error: "Email already exists",
+      });
+    }
+
     // Create an update object
     const update = {
       $set: {
@@ -239,7 +244,8 @@ export const kidUpdate = async (request, response) => {
     });
 
     // Call the function to update/add kid to the user
-    await updateKidToUser(
+
+    const updatingIntoUser = await updateKidToUser(
       updatedKid,
       upComingPassword,
       kidId
@@ -252,10 +258,11 @@ export const kidUpdate = async (request, response) => {
       data: updatedKid,
     });
   } catch (error) {
+    
     response.status(500).json({
       code: code400,
       success: false,
-      error: "Internal server error"
+      error: error.message
     });
   }
 };
