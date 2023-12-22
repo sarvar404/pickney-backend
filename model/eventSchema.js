@@ -47,20 +47,24 @@ const eventSchema = new mongoose.Schema(
     frequency: {
       type: String,
       enum: ["D", "M", "W", "A"],
+      required: true,
     },
     max_count: {
       type: Number,
+      required: true,
     },
     start_at: {
-      type: Date,
+      type: String,
+      required : true,
     },
     end_at: {
-      type: Date,
+      type: String,
+      required : true,
     },
     status: {
-      type: Boolean,
-      default: true,
-      required: true,
+      type: Number,
+      enum: [1,2,3], // a : active , 2: inactive, 3 : deleted
+      required : true,
     },
     photo: {
       type: [String],

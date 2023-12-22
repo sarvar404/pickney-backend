@@ -30,9 +30,18 @@ import loanRouter from "./routes/loan.js";
 import loanLogsRouter from "./routes/loan-logs.js";
 import { EventsImage, commonImage } from "./storageFileEnums.js";
 import { authSecurityHeader } from "./middlewares/middlewareAuth.js";
-import { addFixedDepositLog, addPassbook } from "./controller/fixedDepositController.js";
+import {
+  addFixedDepositLog,
+  addPassbook,
+} from "./controller/fixedDepositController.js";
+
+// model
 import fixedDepositSchema from "./model/fixedDepositSchema.js";
-import { fdStatus_MATURED } from "./contentId.js";
+import eventSchema from "./model/eventSchema.js";
+// enums
+import { fdStatus_MATURED, is_active } from "./contentId.js";
+import { addActivityCronJob } from "./controller/eventsController.js";
+import activitySchema from "./model/activitySchema.js";
 
 const upload = multer({
   dest: "uploads/",
@@ -88,75 +97,80 @@ const blobService = azure.createBlobService(
   storageAccountKey
 );
 
-app.post("/api/upload/common-profile",authSecurityHeader, upload.single("ps-img"), (req, res) => {
-  try {
-    const blobName = generateBlobName(req.file.originalname);
-    const stream = fs.createReadStream(req.file.path);
-    const streamLength = req.file.size;
+app.post(
+  "/api/upload/common-profile",
+  authSecurityHeader,
+  upload.single("ps-img"),
+  (req, res) => {
+    try {
+      const blobName = generateBlobName(req.file.originalname);
+      const stream = fs.createReadStream(req.file.path);
+      const streamLength = req.file.size;
 
-    // Set the content type of the blob
-    const options = {
-      contentSettings: {
-        contentType: req.file.mimetype,
-      },
-    };
+      // Set the content type of the blob
+      const options = {
+        contentSettings: {
+          contentType: req.file.mimetype,
+        },
+      };
 
-    blobService.createBlockBlobFromStream(
-      commonImage,
-      blobName,
-      stream,
-      streamLength,
-      options,
-      (error, result, response) => {
-        if (!error) {
-          // Generate a SAS token with read permission
-          const startDate = new Date();
-          const expiryDate = new Date(startDate);
-          expiryDate.setMinutes(startDate.getMinutes() + 30); // Set the expiration time to 30 minutes from now
+      blobService.createBlockBlobFromStream(
+        commonImage,
+        blobName,
+        stream,
+        streamLength,
+        options,
+        (error, result, response) => {
+          if (!error) {
+            // Generate a SAS token with read permission
+            const startDate = new Date();
+            const expiryDate = new Date(startDate);
+            expiryDate.setMinutes(startDate.getMinutes() + 30); // Set the expiration time to 30 minutes from now
 
-          const sharedAccessPolicy = {
-            AccessPolicy: {
-              Permissions: azure.BlobUtilities.SharedAccessPermissions.READ,
-              Start: startDate,
-              Expiry: expiryDate,
-            },
-          };
+            const sharedAccessPolicy = {
+              AccessPolicy: {
+                Permissions: azure.BlobUtilities.SharedAccessPermissions.READ,
+                Start: startDate,
+                Expiry: expiryDate,
+              },
+            };
 
-          const sasToken = blobService.generateSharedAccessSignature(
-            commonImage,
-            blobName,
-            sharedAccessPolicy
-          );
+            const sasToken = blobService.generateSharedAccessSignature(
+              commonImage,
+              blobName,
+              sharedAccessPolicy
+            );
 
-          // Construct the URL with the SAS token
-          const imageUrl = blobService.getUrl(
-            commonImage,
-            blobName,
-            sasToken
-          );
+            // Construct the URL with the SAS token
+            const imageUrl = blobService.getUrl(
+              commonImage,
+              blobName,
+              sasToken
+            );
 
-          return res.status(200).json({
-            success: true,
-            message: "File uploaded successfully",
-            imageUrl,
-          });
-        } else {
-          return res.status(500).json({
-            success: false,
-            message: "Failed to upload file",
-            error: error.message,
-          });
+            return res.status(200).json({
+              success: true,
+              message: "File uploaded successfully",
+              imageUrl,
+            });
+          } else {
+            return res.status(500).json({
+              success: false,
+              message: "Failed to upload file",
+              error: error.message,
+            });
+          }
         }
-      }
-    );
-  } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: "Internal server error",
-      error: error.message,
-    });
+      );
+    } catch (error) {
+      return res.status(500).json({
+        success: false,
+        message: "Internal server error",
+        error: error.message,
+      });
+    }
   }
-});
+);
 app.post("/api/upload/events", upload.array("ps-img", 10), async (req, res) => {
   try {
     const files = req.files;
@@ -274,7 +288,6 @@ app.listen(PORT, () => {
   console.log(`connection is on :: >> ${PORT}`);
 });
 
-
 // cron job
 
 // */2 * * * * // each two minutes
@@ -362,5 +375,252 @@ cron.schedule("*/2 * * * *", async () => {
     console.error("Cron Job Error:", error.message);
   }
 });
+
+// cron.schedule("*/2 * * * *", async () => {
+//   try {
+//     const totalEvents = await eventSchema.find();
+//   } catch (error) {
+//     console.error("Cron Job Error:", error.message);
+//   }
+// });
+
+app.post("/testing", async (req, res) => {
+  try {
+    const totalEvents = await eventSchema.find();
+
+    for (const event of totalEvents) {
+      if (event.is_recurring && event.status === 1 && event.is_auto_complete_event === true) {
+        switch (event.frequency) {
+          case "D":
+            await processDailyEvent(event);
+            break;
+          case "W":
+            await processWeeklyEvent(event);
+            break;
+          case "M":
+            await processMonthlyEvent(event);
+            break;
+          default:
+            console.error(`Unsupported frequency: ${event.frequency}`);
+        }
+      }
+    }
+
+    // console.log("Cron job completed");
+    res.status(200).json({ success: true, message: "Cron job completed" });
+  } catch (error) {
+    // console.error("Cron Job Error:", error);
+    res.status(500).json({ success: false, error: "Internal Server Error" });
+  }
+});
+
+async function processDailyEvent(event) {
+  const startDate = moment(event.start_at, "DD/MM/YYYY").add(1, "day"); // Start one day ahead of the current date
+  const endDate = startDate.clone().add(2, "days"); // endDate is three days ahead of startDate
+
+  const latestActivities = await activitySchema
+    .find({
+      eventId: event._id,
+      userId: event.userId,
+      kidId: event.kidId,
+    })
+    .sort({ end_at: -1 })
+    .limit(1);
+
+  // Function to create activity data
+  const createActivityData = (startDate) => ({
+    _id: event._id,
+    userId: event.userId,
+    kidId: event.kidId,
+    activity_name: event.name,
+    status: event.status,
+    remarks: undefined,
+    start_at: startDate.format("DD/MM/YYYY"),
+    end_at: startDate.format("DD/MM/YYYY"), // Set end_at to the same day
+    photo: "https://photos.google.com",
+  });
+
+  if (latestActivities.length === 0) {
+    // No latest activity, create activities for the specified range
+    while (startDate.isSameOrBefore(endDate)) {
+      // Check if you need to create an activity entry based on other conditions
+      for (let index = 0; index < event.max_count; index++) {
+        const activityData = createActivityData(startDate);
+        await addActivityCronJob(activityData);
+      }
+      startDate.add(1, "day");
+    }
+  } else {
+    // There is a latest activity
+    const currentDate = moment();
+    const latestActivityStartDate = moment(
+      latestActivities[0].end_at,
+      "DD/MM/YYYY"
+    );
+
+    // Start one day ahead of the latest activity start date
+    const startDate = latestActivityStartDate.clone().add(1, "day");
+    const endDate = startDate.clone().add(2, "days"); // endDate is three days ahead of startDate
+    //   console.log(currentDate.isAfter(latestActivityStartDate))
+    // process.exit();
+
+    if (currentDate.isAfter(latestActivityStartDate)) {
+      // Current date is greater than latestActivity start_at date, create a new activity
+      while (startDate.isSameOrBefore(endDate)) {
+        // Check if you need to create an activity entry based on other conditions
+        for (let index = 0; index < event.max_count; index++) {
+          const activityData = createActivityData(startDate);
+          await addActivityCronJob(activityData);
+        }
+        startDate.add(1, "day");
+      }
+    }
+  }
+}
+
+async function processWeeklyEvent(event) {
+  const latestActivities = await activitySchema
+    .find({
+      eventId: event._id,
+      userId: event.userId,
+      kidId: event.kidId,
+    })
+    .sort({ end_at: -1 })
+    .limit(1);
+  // console.log(latestActivities)
+  //   process.exit();
+
+  const currentDate = moment();
+  const latestActivityStartDate = moment(
+    latestActivities[0].end_at,
+    "DD/MM/YYYY"
+  );
+  if (latestActivities.length !== 0) {
+    if (currentDate.isAfter(latestActivityStartDate)) {
+      // Check if you need to create an activity entry based on other conditions
+
+      // const startDate = moment(event.start_at, "DD/MM/YYYY");
+      const startDate = currentDate;
+      // console.log(startDate);
+      // Set endDate to the end of the week and get the next Sunday
+      const endDate = startDate.clone().endOf("isoWeek").isoWeekday(7);
+      // console.log(endDate);
+
+      let entryCount = 0;
+
+      while (entryCount < event.max_count) {
+        // Check if you need to create an activity entry based on other conditions
+        const activityData = {
+          _id: event._id,
+          userId: event.userId,
+          kidId: event.kidId,
+          activity_name: event.name,
+          status: event.status,
+          remarks: undefined,
+          start_at: startDate.format("DD/MM/YYYY"),
+          end_at: endDate.clone().format("DD/MM/YYYY"), // Set end_at to the calculated next Sunday
+          photo: "https://photos.google.com",
+        };
+
+        await addActivityCronJob(activityData);
+        entryCount++;
+      }
+      startDate.add(1, "day");
+    }
+  }
+}
+// changes...
+async function processMonthlyEvent(event) {
+  const latestActivities = await activitySchema
+    .find({
+      eventId: event._id,
+      userId: event.userId,
+      kidId: event.kidId,
+    })
+    .sort({ end_at: -1 })
+    .limit(1);
+
+  const currentDate = moment();
+  const latestActivityEndDate = moment(
+    latestActivities[0]?.end_at,
+    "DD/MM/YYYY"
+  );
+
+  // console.log(latestActivityEndDate);
+  // console.log(currentDate.isAfter(latestActivityEndDate))
+
+  // process.exit();
+
+  if (
+    latestActivities.length !== 0 &&
+    currentDate.isAfter(latestActivityEndDate)
+  ) {
+    const startDate = currentDate.clone();
+    // console.log("startDate:", startDate.format("DD/MM/YYYY"));
+
+    // Set endDate to the last day of the current month
+    const endDate = startDate.clone().endOf("month");
+    // console.log("endDate:", endDate.format("DD/MM/YYYY"));
+
+    let entryCount = 0;
+
+    // console.log(startDate.isSameOrBefore(endDate));
+    // process.exit();
+
+    while (startDate.isSameOrBefore(endDate) && entryCount < event.max_count) {
+      // Check if you need to create an activity entry based on other conditions
+      const activityData = {
+        _id: event._id,
+        userId: event.userId,
+        kidId: event.kidId,
+        activity_name: event.name,
+        status: event.status,
+        remarks: undefined,
+        start_at: startDate.format("DD/MM/YYYY"),
+        end_at: endDate.format("DD/MM/YYYY"),
+        photo: "https://photos.google.com",
+      };
+
+      await addActivityCronJob(activityData);
+      entryCount++;
+
+      // Move to the next day
+      startDate.add(1, "day");
+    }
+  }
+}
+
+
+app.put("/status", async (request, response) => {
+  try {
+    const currentDate = moment();
+
+    // Find activities where end_at is on or before the current date and status is 1
+    const activitiesToUpdate = await activitySchema.find({
+      end_at: { $lte: currentDate.format('DD/MM/YYYY') },
+      status: 1,
+    });
+
+    // Update the status of matching activities to 2 (inactive)
+    const updatePromises = activitiesToUpdate.map(async (activity) => {
+      await activitySchema.updateOne({ _id: activity._id }, { status: 2 });
+    });
+
+    // Wait for all updates to complete
+    await Promise.all(updatePromises);
+
+    response.status(200).json({
+      success: true,
+      message: "Activity statuses updated successfully",
+    });
+  } catch (error) {
+    response.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
+
 
 // ... (rest of your code)

@@ -22,3 +22,7 @@ export const is_InActive = "INACTIVE";
 
 export const is_paid = "PAID";
 export const is_pending = "PENDING";
+
+// jobs upto days for daily jobs
+
+export const is_daily_date = 3;

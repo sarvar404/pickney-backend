@@ -28,6 +28,7 @@ export const addActivity = async (request, response) => {
 
 export const updateActivity = async (request, response) => {
   try {
+    return false;
     const activityId = request.params.id;
 
     const updatedActivityData = {
@@ -65,6 +66,7 @@ export const updateActivity = async (request, response) => {
 
 export const deleteActivity = async (request, response) => {
   try {
+    return false;
     const activityId = request.params.id;
 
     const deletedActivity = await activitySchema.findByIdAndDelete(activityId);
