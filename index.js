@@ -292,7 +292,7 @@ app.listen(PORT, () => {
 
 // */2 * * * * // each two minutes
 // 0 0 * * * // 12 am of each day
-cron.schedule("* * * * *", async () => {
+cron.schedule("*/2 * * * *", async () => {
   try {
     // console.log("get called");
     // Get all fixed deposits whose maturity date is today or has already passed
