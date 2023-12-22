@@ -301,6 +301,7 @@ cron.schedule("*/2 * * * *", async () => {
       $or: [
         { end_at: today },
         { end_at: { $lt: today } }, // Check for past dates
+        { status: "ONGOING" }, // Check for "ONGOING" status
       ],
     });
     // console.log(depositsToMature);

@@ -129,7 +129,7 @@ export const OTPVerificationAndSignIn = expressAsyncHandler(
       if (!latestOTP) {
         return response.status(400).json({
           success: false,
-          message: "OTP not found or has been expired",
+          error: "OTP not found or has been expired",
         });
       }
 
@@ -151,7 +151,7 @@ export const OTPVerificationAndSignIn = expressAsyncHandler(
       if (!user) {
         return response
           .status(400)
-          .json({ success: false, message: "User not found" });
+          .json({ success: false, error: "User not found" });
       }
 
       // Perform your sign-in logic here
@@ -163,7 +163,7 @@ export const OTPVerificationAndSignIn = expressAsyncHandler(
       console.error(err);
       return response
         .status(500)
-        .json({ success: false, message: "Internal server error" });
+        .json({ success: false, error: "Internal server error" });
     }
   }
 );
@@ -180,7 +180,7 @@ export const forgotAndGetOTP = expressAsyncHandler(
       if (!user) {
         return response
           .status(400)
-          .json({ success: false, message: "Invalid Email Address" });
+          .json({ success: false, error: "Invalid Email Address" });
       }
 
       const otp = generateOTP();
@@ -229,7 +229,7 @@ export const forgotAndGetOTP = expressAsyncHandler(
       console.error(err);
       return response
         .status(500)
-        .json({ success: false, message: "Internal server error" });
+        .json({ success: false, error: "Internal server error" });
     }
   }
 );
@@ -248,7 +248,7 @@ export const reSetPassword = expressAsyncHandler(async (request, response) => {
     if (!latestOTP) {
       return response.status(400).json({
         success: false,
-        message: "OTP not found or has been expired",
+        error: "OTP not found or has been expired",
       });
     }
 
@@ -256,7 +256,7 @@ export const reSetPassword = expressAsyncHandler(async (request, response) => {
     if (otp !== latestOTP.otp) {
       return response
         .status(400)
-        .json({ success: false, message: "Invalid OTP" });
+        .json({ success: false, error: "Invalid OTP" });
     }
 
     // Update the OTP status to false after successful verification
@@ -268,7 +268,7 @@ export const reSetPassword = expressAsyncHandler(async (request, response) => {
     if (!user) {
       return response
         .status(400)
-        .json({ success: false, message: "User not found" });
+        .json({ success: false, error: "User not found" });
     }
 
     // Hash the new password using bcrypt
@@ -286,7 +286,7 @@ export const reSetPassword = expressAsyncHandler(async (request, response) => {
     console.error(err);
     return response
       .status(500)
-      .json({ success: false, message: "Internal server error" });
+      .json({ success: false, error: "Internal server error" });
   }
 });
 
@@ -517,7 +517,7 @@ export const registrationVerify = expressAsyncHandler(
       if (!latestOTP) {
         return response.status(400).json({
           success: false,
-          message: "OTP not found or has been expired",
+          error: "OTP not found or has been expired",
         });
       }
 
@@ -525,7 +525,7 @@ export const registrationVerify = expressAsyncHandler(
       if (otp !== latestOTP.otp) {
         return response
           .status(400)
-          .json({ success: false, message: "Invalid OTP" });
+          .json({ success: false, error: "Invalid OTP" });
       }
 
       // Update the OTP status to false after successful verification
@@ -540,7 +540,7 @@ export const registrationVerify = expressAsyncHandler(
       if (!user) {
         return response
           .status(400)
-          .json({ success: false, message: "User not found" });
+          .json({ success: false, error: "User not found" });
       }
 
       // Perform your sign-in logic here
@@ -552,7 +552,7 @@ export const registrationVerify = expressAsyncHandler(
       console.error(err);
       return response
         .status(500)
-        .json({ success: false, message: "Internal server error" });
+        .json({ success: false, error: "Internal server error" });
     }
   }
 );
@@ -607,7 +607,7 @@ const KIDLOGIN = async (uniqueId, password, response) => {
     return response.status(404).json({
       code: code400,
       success: false,
-      message: "Invalid User Id",
+      error: "Invalid User Id",
     });
   }
 
@@ -617,7 +617,7 @@ const KIDLOGIN = async (uniqueId, password, response) => {
     return response.status(404).json({
       code: code400,
       success: false,
-      message: "Invalid User Password",
+      error: "Invalid User Password",
     });
   }
 
@@ -740,7 +740,7 @@ export const getProfile = async (request, response) => {
     if (!userDetails) {
       return response.status(404).json({
         success: false,
-        message: "User not found",
+        error: "User not found",
       });
     }
 
@@ -757,7 +757,7 @@ export const getProfile = async (request, response) => {
   } catch (error) {
     response.status(500).json({
       success: false,
-      message: "Internal server error",
+      error: "Internal server error",
       errorCode : code400, error: error.message,
     });
   }
