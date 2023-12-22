@@ -11,11 +11,25 @@ export const getFixedDeposit = async (request, response) => {
   // console.log(id)
   try {
     const details = await fixedDepositSchema.findById(id);
+
+    if (!details) {
+      return response.status(404).json({
+        errorCode: code400,
+        success: false,
+        error: "fd not found",
+      });
+    }
+
+    // Fetch loan logs based on the loan ID
+    const logs = await fixedDepositLogsSchema.find({ fdId: details._id });
+
+
     response.status(200).json({
       code: code201,
       success: true,
       message: "successful",
       data: details,
+      logs
     });
   } catch (error) {
     response
@@ -97,6 +111,11 @@ export const deleteFixedDeposit = async (request, response) => {
         message: "Fixed Deposit not found",
       });
     }
+
+    const deletedLogs = await fixedDepositLogsSchema.deleteMany({ fdId: deletedFixedDeposit });
+    
+    // Assuming the correct field is `entryId` in passbookSchema, delete related passbook entries
+    const deletedPassbookEntries = await passbookSchema.deleteMany({ entryId: fixedDepositId });
 
     response.status(200).json({
       code: code201,

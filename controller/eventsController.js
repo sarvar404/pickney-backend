@@ -191,7 +191,7 @@ export const getSingleEvent = async (request, response) => {
       return response.status(404).json({
         errorCode: code400,
         success: false,
-        message: "Event not found",
+        error: "Event not found",
       });
     }
 

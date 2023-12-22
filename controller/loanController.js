@@ -11,11 +11,24 @@ export const getLoan = async (request, response) => {
   const id = request.params.id;
   try {
     const details = await loanSchema.findById(id);
+
+    if (!details) {
+      return response.status(404).json({
+        errorCode: code400,
+        success: false,
+        error: "Event not found",
+      });
+    }
+
+    // Fetch loan logs based on the loan ID
+    const logs = await loanLogsSchema.find({ loanId: details._id });
+
     response.status(200).json({
       code: code201,
       success: true,
       message: "Successful",
       data: details,
+      logs,
     });
   } catch (error) {
     response
@@ -23,6 +36,7 @@ export const getLoan = async (request, response) => {
       .json({ errorCode: code400, success: false, error: error.message });
   }
 };
+
 
 export const getAllLoan = async (request, response) => {
   try {
@@ -88,6 +102,7 @@ export const deleteLoan = async (request, response) => {
   try {
     const loanId = request.params.id;
 
+    // Find and delete the loan
     const deletedLoan = await loanSchema.findByIdAndDelete(loanId);
 
     if (!deletedLoan) {
@@ -98,10 +113,18 @@ export const deleteLoan = async (request, response) => {
       });
     }
 
+    // Delete logs associated with the loan
+    const deletedLogs = await loanLogsSchema.deleteMany({ loanId });
+    
+    // Assuming the correct field is `entryId` in passbookSchema, delete related passbook entries
+    const deletedPassbookEntries = await passbookSchema.deleteMany({ entryId: loanId });
+
     response.status(200).json({
       code: code201,
       success: true,
       message: "Loan deleted successfully",
+      deletedLogsCount: deletedLogs.deletedCount,
+      deletedPassbookEntriesCount: deletedPassbookEntries.deletedCount,
     });
   } catch (error) {
     response
@@ -109,6 +132,8 @@ export const deleteLoan = async (request, response) => {
       .json({ errorCode: code400, success: false, error: error.message });
   }
 };
+
+
 
 // cron job .....
 
