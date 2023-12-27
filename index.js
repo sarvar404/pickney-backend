@@ -225,11 +225,17 @@ app.post("/api/upload/events", upload.array("ps-img", 10), async (req, res) => {
                 blobName,
                 sasToken
               );
+
+              // Resolve with the modified response format
               resolve({
                 success: true,
                 message: "File uploaded successfully",
-                filename: file.originalname,
-                imageUrl,
+                data: [
+                  {
+                    filename: file.originalname,
+                    imageUrl,
+                  },
+                ],
               });
             } else {
               reject({
@@ -249,7 +255,14 @@ app.post("/api/upload/events", upload.array("ps-img", 10), async (req, res) => {
     // Cleanup other files in the 'uploads' folder
     cleanupTemporaryFiles();
 
-    res.status(200).json(results);
+    // Combine the individual results into a single response
+    const finalResponse = {
+      success: true,
+      message: "All files uploaded successfully",
+      data: results.flatMap((result) => result.data),
+    };
+
+    res.status(200).json(finalResponse);
   } catch (error) {
     res.status(500).json({
       success: false,
@@ -258,6 +271,7 @@ app.post("/api/upload/events", upload.array("ps-img", 10), async (req, res) => {
     });
   }
 });
+
 
 function generateBlobName(originalName) {
   const timestamp = new Date().getTime();
