@@ -394,7 +394,7 @@ export const registration = expressAsyncHandler(async (request, response) => {
 
           return response
             .status(500)
-            .json({ success: false, error: "Failed to send OTP email" });
+            .json({ success: false, errorCode : code400, error: "Failed to send OTP email" });
         } else {
           // console.log('Email sent successfully!');
           setTimeout(async () => {
@@ -420,6 +420,7 @@ export const registration = expressAsyncHandler(async (request, response) => {
 
       if (verifiedUser) {
         return response.status(400).json({
+          errorCode : code400,
           success: false,
           message: "User with the same email is already verified",
         });
@@ -467,14 +468,14 @@ export const registration = expressAsyncHandler(async (request, response) => {
 
       transporter.sendMail(mailOptions, async function (error, info) {
         if (error) {
-          console.error(error);
+          // console.error(error);
           // Rollback: Delete the user if OTP email sending fails
           await userSchema.findByIdAndDelete(savedUser._id);
           await registrationOTPSchema.findByIdAndDelete(otpDocument._id);
 
           return response
             .status(500)
-            .json({ success: false, message: "Failed to send OTP email" });
+            .json({ success: false,errorCode : code400, message: "Failed to send OTP email" });
         } else {
           // console.log('Email sent successfully!');
           setTimeout(async () => {
@@ -496,7 +497,7 @@ export const registration = expressAsyncHandler(async (request, response) => {
     console.error(err);
     return response
       .status(500)
-      .json({ success: false, message: "Internal server error" });
+      .json({ success: false,errorCode : code400, message: "Internal server error" });
   }
 });
 
