@@ -596,6 +596,7 @@ const PARENTLOGIN = async (email, password, response) => {
     token: refreshTokenDocument.token,
     refreshToken: refreshTokenDocument.refreshToken,
     role: user.role,
+    id: user._id,
   });
 };
 
@@ -645,6 +646,7 @@ const KIDLOGIN = async (uniqueId, password, response) => {
     token: refreshTokenDocument.token,
     refreshToken: refreshTokenDocument.refreshToken,
     role: kid.role,
+    id: kid._id,
   });
 };
 
