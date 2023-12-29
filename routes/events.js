@@ -1,7 +1,8 @@
 import express from "express";
 import dotenv from "dotenv";
-import { addEvent, addEventDefault, deleteEvent, deleteEventDefault, deleteGrantedKid, getAllEventList, getSingleEvent, grantKid, updateEvent, updateEventDefault, updateGrantedKid } from "../controller/eventsController.js";
+import { addEvent, addEventDefault, deleteEvent, deleteEventDefault, getActivitiesByDate, getAllEventList, getSingleEvent, updateEvent, updateEventDefault } from "../controller/eventsController.js";
 import { authSecurityHeader } from "../middlewares/middlewareAuth.js";
+import { deleteGrantedKid, grantStar, updateGrantedKid } from "../controller/starGrantController.js";
 
 dotenv.config();
 const router = express.Router();
@@ -11,7 +12,7 @@ router.put("/events/update-event", authSecurityHeader, updateEvent);
 router.delete("/events/delete-event/:id", authSecurityHeader, deleteEvent);
 
 
-router.post("/events/grant-kid", authSecurityHeader, grantKid);
+router.post("/events/grant-star", authSecurityHeader, grantStar);
 router.put("/events/update-granted-kid/:id", authSecurityHeader, updateGrantedKid);
 router.delete("/events/delete-granted-kid/:id", authSecurityHeader, deleteGrantedKid);
 
@@ -22,6 +23,7 @@ router.delete("/events/delete-event-default/:id", authSecurityHeader, deleteEven
 // GET USER
 router.get("/events/get-single-events/:id", authSecurityHeader, getSingleEvent);
 router.get("/events/get-all-events", authSecurityHeader, getAllEventList);
+router.get("/events/get-events-by-date", authSecurityHeader, getActivitiesByDate);
 
 
 export default router;

@@ -3,7 +3,7 @@ import { kidGrantTb, eventTb, userTb } from "../tbEnums.js";
 
 const grantStarsSchema = new mongoose.Schema(
   {
-    userId: {
+    createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: userTb, // Reference to the user schema
       required: true,
@@ -15,10 +15,6 @@ const grantStarsSchema = new mongoose.Schema(
     },
     kidId: {
       type: mongoose.Schema.Types.ObjectId,
-      required: true,
-    },
-    selected_date: {
-      type: Date,
       required: true,
     },
     is_recurring: {

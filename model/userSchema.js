@@ -44,6 +44,9 @@ const userSchema = new mongoose.Schema(
       type: String, // Assuming it's a file path or URL
       required: true,
     },
+    address: {
+      type: String,
+    },
   },
   { timestamps: { createdAt: "created_at", updatedAt: "updated_at" } }
 );

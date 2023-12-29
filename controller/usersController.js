@@ -784,3 +784,106 @@ export const getAllProfiles = async (request, response) => {
   }
 };
 
+export const updateUserProfile = async (request, response) => {
+  try {
+
+    const { _id, email, name, guardian, phone, photo, address } = request.body;
+    const password = request.body.password; // Assuming you have a way to get the password
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    // Check if the provided email with role 'P' exists
+    const existingUserP = await userSchema.findOne({ email, role: 'P' });
+
+    if (existingUserP) {
+      // Email with role 'P' exists, update the record
+      const updatedUserData = {
+        name,
+        email,
+        guardian,
+        phone,
+        password: passwordHash,
+        photo,
+        role : PARENT,
+        address,
+      };
+      const updatedUser = await userSchema.findOneAndUpdate(
+        { _id },
+        updatedUserData,
+        { new: true }
+      );
+      console.log(updatedUserData)
+
+      if (!updatedUser) {
+        return response.status(404).json({
+          errorCode: code400,
+          success: false,
+          error: "User not found",
+        });
+      }
+
+      return response.status(200).json({
+        success: true,
+        message: "User details updated successfully",
+        updatedUser,
+      });
+    } else {
+      // Email with role 'P' does not exist, look for an unverified user with the provided email
+      let existingUserUnverified = await userSchema.findOne({
+        email
+      });
+
+      if (!existingUserUnverified) {
+        // Unverified user with the provided email exists, update the record
+        const updatedUserData = {
+          name,
+          email,
+          guardian,
+          phone,
+          password: passwordHash,
+          photo,
+          role : PARENT,
+          address,
+          verified: false,
+        };
+
+        const updatedUser = await userSchema.findOneAndUpdate(
+          { _id },
+          updatedUserData,
+          { new: true }
+        );
+
+        if (!updatedUser) {
+          return response.status(404).json({
+            errorCode: code400,
+            success: false,
+            error: "User not found",
+          });
+        }
+
+        return response.status(200).json({
+          success: true,
+          message: "User details updated successfully",
+          updatedUser,
+        });
+      } else {
+        // No existing user found, return an error response
+        return response.status(400).json({
+          errorCode : code400,
+          success: false,
+          error: "User with the same email is already verified",
+        });
+      }
+    }
+  } catch (error) {
+    console.log(error)
+    response.status(500).json({
+      errorCode: code400,
+      success: false,
+      error: error.message,
+    });
+  }
+};
+
+
+
+

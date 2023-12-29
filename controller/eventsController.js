@@ -1,3 +1,4 @@
+import moment from "moment/moment.js";
 import eventSchema from "../model/eventSchema.js";
 import defaultEventSchema from "../model/defaultEventSchema.js";
 import grantStarsSchema from "../model/grantStarsSchema.js";
@@ -5,6 +6,7 @@ import activitySchema from "../model/activitySchema.js";
 import dotenv from "dotenv";
 import { code201, code400 } from "../responseCode.js";
 import { is_active } from "../contentId.js";
+
 
 dotenv.config();
 
@@ -64,10 +66,6 @@ export const updateEvent = async (request, response) => {
 
 
 
-
-
-
-
 export const deleteEvent = async (request, response) => {
   try {
     const eventId = request.params.id; // Assuming the ID is provided in the URL params
@@ -85,94 +83,6 @@ export const deleteEvent = async (request, response) => {
     response.status(200).json({
       success: true,
       message: "Event deleted successfully"
-    });
-  } catch (error) {
-    response.status(400).json({ errorCode : code400, success: false, error: error.message });
-  }
-};
-
-
-export const grantKid = async (request, response) => {
-  try {
-    const eventData = {
-      userId: request.body.userId,
-      kidId: request.body.kidId,
-      eventId: request.body.eventId,
-      selected_date: request.body.selected_date,
-      is_recurring: request.body.is_recurring,
-      select_event: request.body.select_event,
-      remarks: request.body.remarks,
-      select_value: request.body.is_recurring ? 0 : request.body.select_value || 0,
-      select_count: request.body.is_recurring ? 0 : request.body.select_count || 0,
-    };
-
-    const savedEvent = await grantStarsSchema.create(eventData);
-
-    response.status(201).json({
-      code: 201,
-      success: true,
-      message: "kid granted successfully",
-      id: savedEvent.id,
-    });
-  } catch (error) {
-    response.status(400).json({ errorCode : code400, success: false, error: error.message });
-  }
-};
-
-export const updateGrantedKid = async (request, response) => {
-  try {
-    const eventId = request.params.id;
-
-    const updatedEventData = {
-      selected_date: request.body.selected_date,
-      is_recurring: request.body.is_recurring,
-      select_event: request.body.select_event,
-      remarks: request.body.remarks,
-      select_value: request.body.is_recurring ? 0 : request.body.select_value || 0,
-      select_count: request.body.is_recurring ? 0 : request.body.select_count || 0,
-    };
-
-    const updatedEvent = await grantStarsSchema.findOneAndUpdate(
-      { _id: eventId },
-      updatedEventData,
-      { new: true }
-    );
-
-    if (!updatedEvent) {
-      return response.status(404).json({
-        errorCode : code400, 
-        success: false,
-        message: "granted kid list not found",
-      });
-    }
-
-    response.status(200).json({
-      success: true,
-      message: "granted kid details update successfully",
-      updatedEvent,
-    });
-  } catch (error) {
-    response.status(400).json({ errorCode : code400, success: false, error: error.message });
-  }
-};
-
-export const deleteGrantedKid = async (request, response) => {
-  try {
-    const eventId = request.params.id;
-
-    const deletedEvent = await grantStarsSchema.findByIdAndDelete(eventId);
-
-    if (!deletedEvent) {
-      return response.status(404).json({
-        errorCode : code400, 
-        success: false,
-        message: "granted kid list not found",
-      });
-    }
-
-    response.status(200).json({
-      success: true,
-      message: "granted kid details deleted successfully",
     });
   } catch (error) {
     response.status(400).json({ errorCode : code400, success: false, error: error.message });
@@ -227,6 +137,32 @@ export const getAllEventList = async (request, response) => {
     });
   } catch (err) {
     response.status(404).json({ errorCode: code400, success: false, error: "Not found" });
+  }
+};
+
+export const getActivitiesByDate = async (request, response) => {
+  try {
+    const startDate = moment(request.body.checkByDate, "DD/MM/YYYY");
+    const is_recurring = request.body.is_recurring;
+
+    const events = await eventSchema.find({
+      start_at: { $lte: startDate.endOf("day").toDate() },
+      is_recurring: is_recurring,
+      status: 1,
+    });
+
+    response.status(200).json({
+      code: code201,
+      success: true,
+      message: "events fetched successfully",
+      events,
+    });
+  } catch (error) {
+    response.status(500).json({
+      errorCode: code400,
+      success: false,
+      error: error.message,
+    });
   }
 };
 
