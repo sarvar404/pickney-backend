@@ -695,7 +695,7 @@ export const accessTrue = async (request, response) => {
       message: "You have access",
     });
   } catch (error) {
-    console.log(error, "inside controller ->...................");
+    
     response.status(400).json({ errorCode : code400, error: error.message });
   }
 };
@@ -811,7 +811,7 @@ export const updateUserProfile = async (request, response) => {
         updatedUserData,
         { new: true }
       );
-      console.log(updatedUserData)
+      // console.log(updatedUserData)
 
       if (!updatedUser) {
         return response.status(404).json({
@@ -875,7 +875,7 @@ export const updateUserProfile = async (request, response) => {
       }
     }
   } catch (error) {
-    console.log(error)
+    // console.log(error)
     response.status(500).json({
       errorCode: code400,
       success: false,
