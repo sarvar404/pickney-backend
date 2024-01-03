@@ -11,6 +11,53 @@ import {
 import { KID, PARENT } from "../contentId.js";
 import { trimVal } from "../validation/trim.js";
 
+
+export const getSingleKid = async (request, response) => {
+  const _id = request.params.id;
+
+  try {
+    // Find the event details
+    const kidDetails = await kidSchema.findById(_id);
+
+    if (!kidDetails) {
+      return response.status(404).json({
+        errorCode: code400,
+        success: false,
+        error: "Kid not found",
+      });
+    }
+
+    response.status(200).json({
+      code: code200,
+      success: true,
+      message: "Successful",
+      event: kidDetails,
+    });
+  } catch (error) {
+    response.status(500).json({
+      errorCode: code400,
+      success: false,
+      error: error.message,
+    });
+  }
+};
+
+export const getAllKidList = async (request, response) => {
+  try {
+    const details = await kidSchema.find();
+    const totalRecords = details.length;
+    response.status(200).json({
+      code: code200,
+      success: true,
+      message: "Successful",
+      totalRecords: totalRecords,
+      data: details,
+    });
+  } catch (err) {
+    response.status(404).json({ errorCode: code400, success: false, error: "Not found" });
+  }
+};
+
 // Function to generate a random string of specified length
 const generateKidId = async (length) => {
   const characters =

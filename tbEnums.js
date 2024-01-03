@@ -1,5 +1,6 @@
 export const userTb = "all_user_sr01";
 export const kidTb = "all_kid_sr01";
+export const kidBalTb = "all_kid_total_balance_sr01";
 export const kidGrantTb = "all_stars_grant_sr01";
 export const refreshtokenTb = "all_refreshtoken_sr01";
 export const refreshtokenKidTb = "all_refreshtoken_kid_sr01";

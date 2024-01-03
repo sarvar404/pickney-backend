@@ -192,6 +192,7 @@ export const addPassbook = async (data, callback) => {
       status: data.status,
       remarks: "FD has been matured",
       balance_stars: data.principal,
+      available_balance: data.available_balance,
       photo: "http://dummy.jpg",
       is_credit: is_credit,
     };

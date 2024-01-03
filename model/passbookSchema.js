@@ -36,9 +36,16 @@ const passbookSchema = new mongoose.Schema(
     balance_stars: {
       type: Number,
       default: 0, // You can set a default value if needed
+      required: true,
+    },
+    available_balance: {
+      type: Number,
+      default: 0, // You can set a default value if needed
+      required: true,
     },
     is_credit: {
       type: String,
+      required: true,
     },
   },
   { timestamps: { createdAt: "created_at"} }

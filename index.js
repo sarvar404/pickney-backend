@@ -42,6 +42,7 @@ import eventSchema from "./model/eventSchema.js";
 import { fdStatus_MATURED, is_active } from "./contentId.js";
 import { addActivityCronJob } from "./controller/eventsController.js";
 import activitySchema from "./model/activitySchema.js";
+import { updateOrCreateKidBalance } from "./helper_function.js";
 
 const upload = multer({
   dest: "uploads/",
@@ -307,6 +308,7 @@ app.listen(PORT, () => {
 // */2 * * * * // each two minutes
 // 0 0 * * * // 12 am of each day
 cron.schedule("*/2 * * * *", async () => {
+  return false;
   try {
     // console.log("get called");
     // Get all fixed deposits whose maturity date is today or has already passed
@@ -389,14 +391,6 @@ cron.schedule("*/2 * * * *", async () => {
     console.error("Cron Job Error:", error.message);
   }
 });
-
-// cron.schedule("*/2 * * * *", async () => {
-//   try {
-//     const totalEvents = await eventSchema.find();
-//   } catch (error) {
-//     console.error("Cron Job Error:", error.message);
-//   }
-// });
 
 app.post("/testing", async (req, res) => {
   try {
@@ -690,6 +684,97 @@ app.put("/status", async (request, response) => {
       success: false,
       error: error.message,
     });
+  }
+});
+
+app.get("/testing123", async (request, response) => {
+  try {
+    // console.log("get called");
+    // Get all fixed deposits whose maturity date is today or has already passed
+    const today = moment().format("MM/DD/YYYY");
+    const depositsToMature = await fixedDepositSchema.find({
+      $or: [
+        { end_at: today },
+        { end_at: { $lt: today } }, // Check for past dates
+        { status: "ONGOING" }, // Check for "ONGOING" status
+      ],
+      status: { $ne: "MATURED" }, // Exclude records with "MATURED" status
+    });
+    // Process each deposit to update status and perform additional actions
+    depositsToMature.forEach(async (deposit) => {
+      // Check if the fixed deposit is cancelled
+      if (deposit.status === "CANCELLED") {
+        // Update the status for addFixedDepositLog and addPassbook
+        const cancelledStatus = "CANCELLED";
+
+        // Add the fixed deposit to the logs
+        addFixedDepositLog(
+          {
+            fdId: deposit._id,
+            principal: deposit.principal,
+            status: cancelledStatus,
+          },
+          (logResponse) => {
+            // console.log(logResponse);
+          }
+        );
+
+        // Add an entry to the passbook
+        addPassbook(
+          {
+            userId: deposit.userId,
+            entryId: deposit._id,
+            status: cancelledStatus,
+            principal: deposit.principal,
+          },
+          (passbookResponse) => {
+            // console.log(passbookResponse);
+          }
+        );
+
+        // console.log(`Fixed Deposit ${deposit._id} is cancelled.`);
+      } else if (deposit.status === "ONGOING") {
+        // Update the status of the fixed deposit
+        deposit.status = fdStatus_MATURED;
+        await deposit.save();
+
+        
+
+        const isTotalDone = await updateOrCreateKidBalance(deposit.kidId,deposit.userId,deposit.principal);
+        
+        if (isTotalDone) {
+            // Add the fixed deposit to the logs
+            addFixedDepositLog(
+              {
+                fdId: deposit._id,
+                principal: deposit.principal,
+                status: fdStatus_MATURED,
+              },
+              (logResponse) => {
+                // console.log(logResponse);
+              }
+            );
+  
+            // Add an entry to the passbook
+            addPassbook(
+              {
+                userId: deposit.userId,
+                entryId: deposit._id,
+                status: deposit.status,
+                principal: deposit.principal,
+                available_balance: isTotalDone.available_balance,
+              },
+              (passbookResponse) => {
+                // console.log(passbookResponse);
+              }
+            );
+        }
+
+        // console.log(`Fixed Deposit ${deposit._id} has matured.`);
+      }
+    });
+  } catch (error) {
+    console.error("Cron Job Error:", error.message);
   }
 });
 

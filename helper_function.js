@@ -1,5 +1,6 @@
 import moment from "moment";
 import eventSchema from "./model/eventSchema.js";
+import kidBalanceSchema from "./model/kidBalanceSchema.js";
 
 export const calculateEmiDates = (endDate, duration) => {
   const emiDates = [];
@@ -87,4 +88,34 @@ export const getEventStars = async (eventId) => {
     throw new Error(`Error getting event stars: ${error.message}`);
   }
 }
+
+// total ammount for kids helper
+export const updateOrCreateKidBalance = async (userId, kidId, available_balance) => {
+  try {
+    // Check if kid balance already exists for the userId and kidId
+    const existingKidBalance = await kidBalanceSchema.findOne({ userId, kidId });
+
+    if (existingKidBalance) {
+
+      const newAvailableBalance = existingKidBalance.available_balance + available_balance;
+      
+      // Update available_balance with the calculated value
+      existingKidBalance.available_balance = newAvailableBalance;
+      
+      await existingKidBalance.save();
+      return existingKidBalance; // Return the updated kid balance
+    } else {
+      // Create a new kid balance record if it doesn't exist
+      const newKidBalance = await kidBalanceSchema.create({
+        userId,
+        kidId,
+        available_balance,
+      });
+      return newKidBalance; // Return the newly created kid balance
+    }
+  } catch (error) {
+    throw new Error(`Failed to update or create kid balance: ${error.message}`);
+  }
+};
+
 
