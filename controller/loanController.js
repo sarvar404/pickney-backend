@@ -1,6 +1,6 @@
 import loanSchema from "../model/loanSchema.js";
 import loanLogsSchema from "../model/loanLogsSchema.js";
-import { code201, code400 } from "../responseCode.js";
+import { code200, code400 } from "../responseCode.js";
 import { is_pending } from "../contentId.js";
 import {
   calculateDynamicEmiDates,
@@ -24,7 +24,7 @@ export const getLoan = async (request, response) => {
     const logs = await loanLogsSchema.find({ loanId: details._id });
 
     response.status(200).json({
-      code: code201,
+      code: code200,
       success: true,
       message: "Successful",
       data: details,
@@ -43,7 +43,7 @@ export const getAllLoan = async (request, response) => {
     const details = await loanSchema.find();
     const totalRecords = details.length;
     response.status(200).json({
-      code: code201,
+      code: code200,
       success: true,
       message: "Successful",
       totalRecords: totalRecords,
@@ -86,7 +86,7 @@ export const updateLoan = async (request, response) => {
     }
 
     response.status(200).json({
-      code: code201,
+      code: code200,
       success: true,
       message: "Loan updated successfully",
       updatedLoan,
@@ -120,7 +120,7 @@ export const deleteLoan = async (request, response) => {
     const deletedPassbookEntries = await passbookSchema.deleteMany({ entryId: loanId });
 
     response.status(200).json({
-      code: code201,
+      code: code200,
       success: true,
       message: "Loan deleted successfully",
       deletedLogsCount: deletedLogs.deletedCount,
@@ -162,7 +162,7 @@ export const addLoanLog = async (data, emi) => {
     const savedLoanLogs = await Promise.all(loanLogPromises);
 
     return {
-      code: code201,
+      code: code200,
       success: true,
       message: "Loan Logs created successfully",
       ids: savedLoanLogs.map((log) => log.id),
@@ -201,8 +201,8 @@ export const addLoan = async (request, response) => {
       addLoanLog(savedLoan, emi);
     }
 
-    response.status(201).json({
-      code: code201,
+    response.status(200).json({
+      code: code200,
       success: true,
       message: "Loan created successfully",
       id: savedLoan.id,

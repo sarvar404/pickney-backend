@@ -1,5 +1,5 @@
 import passbookSchema from "../model/passbookSchema.js";
-import { code201, code400 } from "../responseCode.js";
+import { code200, code400 } from "../responseCode.js";
 
 const handleErrorResponse = (response, status, message) => {
   return response.status(status).json({ success: false, error: message });
@@ -24,7 +24,7 @@ export const addPassbook = async (request, response) => {
 
     const savedPassbook = await passbookSchema.create(passbookData);
 
-    response.status(201).json({
+    response.status(200).json({
       success: true,
       message: "Passbook created successfully",
       id: savedPassbook.id,
@@ -104,7 +104,7 @@ export const getSinglePassbookEntry = async (request, response) => {
     }
 
     response.status(200).json({
-      code: code201,
+      code: code200,
       success: true,
       message: "Successful",
       data: details,
@@ -122,7 +122,7 @@ export const getAllPassbookEntries = async (request, response) => {
     const details = await passbookSchema.find();
     const totalRecords = details.length;
     response.status(200).json({
-      code: code201,
+      code: code200,
       success: true,
       message: "Successful",
       totalRecords: totalRecords,
@@ -151,7 +151,7 @@ export const getCommonAcoountPassBookEntries = async (request, response) => {
     }
 
     response.status(200).json({
-      code: code201,
+      code: code200,
       success: true,
       message: "Successful",
       data: entries,

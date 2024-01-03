@@ -12,7 +12,7 @@ export const addTag = async (request, response) => {
 
     const savedTag = await tagSchema.create(tagData);
 
-    response.status(201).json({
+    response.status(200).json({
       success: true,
       message: "tag created successfully",
       id: savedTag.id,

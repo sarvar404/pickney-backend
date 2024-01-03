@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { kidGrantTb, eventTb, userTb } from "../tbEnums.js";
+import { kidGrantTb, eventTb, userTb, kidTb } from "../tbEnums.js";
 
 const grantStarsSchema = new mongoose.Schema(
   {
@@ -8,33 +8,34 @@ const grantStarsSchema = new mongoose.Schema(
       ref: userTb, // Reference to the user schema
       required: true,
     },
+    kidId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: kidTb,
+      required: true,
+    },
     eventId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: eventTb, // Reference to the user schema
       required: true,
     },
-    kidId: {
-      type: mongoose.Schema.Types.ObjectId,
-      required: true,
+    event_name: {
+      type: String,
+    },
+    event_type: {
+      type: String,
     },
     is_recurring: {
       type: Boolean,
       default: false, // Set a default value if needed
     },
-    select_event: {
-      type: String,
-    },
-    select_value: {
-      type: Number,
-    },
-    select_count: {
+    values: {
       type: Number,
     },
     remarks: {
       type: String,
     },
   },
-  { timestamps: { createdAt: "created_at", updatedAt: "updated_at" } }
+  { timestamps: { createdAt: "created_at" } }
 );
 
 export default mongoose.model(kidGrantTb, grantStarsSchema);

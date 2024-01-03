@@ -16,7 +16,7 @@ export const addActivity = async (request, response) => {
 
     const savedActivity = await activitySchema.create(activityData);
 
-    response.status(201).json({
+    response.status(200).json({
       success: true,
       message: "Activity created successfully",
       id: savedActivity.id,

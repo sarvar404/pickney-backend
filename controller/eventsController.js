@@ -4,7 +4,7 @@ import defaultEventSchema from "../model/defaultEventSchema.js";
 import grantStarsSchema from "../model/grantStarsSchema.js";
 import activitySchema from "../model/activitySchema.js";
 import dotenv from "dotenv";
-import { code201, code400 } from "../responseCode.js";
+import { code200, code400 } from "../responseCode.js";
 import { is_active } from "../contentId.js";
 
 
@@ -109,7 +109,7 @@ export const getSingleEvent = async (request, response) => {
     const activities = await activitySchema.find({ eventId });
 
     response.status(200).json({
-      code: code201,
+      code: code200,
       success: true,
       message: "Successful",
       event: eventDetails,
@@ -129,7 +129,7 @@ export const getAllEventList = async (request, response) => {
     const details = await eventSchema.find();
     const totalRecords = details.length;
     response.status(200).json({
-      code: code201,
+      code: code200,
       success: true,
       message: "Successful",
       totalRecords: totalRecords,
@@ -152,7 +152,7 @@ export const getActivitiesByDate = async (request, response) => {
     });
 
     response.status(200).json({
-      code: code201,
+      code: code200,
       success: true,
       message: "events fetched successfully",
       events,
@@ -185,7 +185,7 @@ export const addActivityCronJob = async (data) => {
     const savedActivity = await activitySchema.create(activityData);
 
     return {
-      code: code201,
+      code: code200,
       success: true,
       message: "activity created successfully",
     };
@@ -219,7 +219,7 @@ export const addActivity = async (event) => {
     }
 
     return {
-      code: code201,
+      code: code200,
       success: true,
       message: "Activities created successfully",
     };
@@ -259,8 +259,8 @@ export const addEvent = async (request, response) => {
       await addActivity(savedEvent); // Await the addActivity function
     }
 
-    response.status(201).json({
-      code: code201,
+    response.status(200).json({
+      code: code200,
       success: true,
       message: "Event created successfully",
       id: savedEvent.id,
@@ -297,8 +297,8 @@ export const addEventDefault = async (request, response) => {
 
     const savedEvent = await defaultEventSchema.create(eventData);
 
-    response.status(201).json({
-      code: code201,
+    response.status(200).json({
+      code: code200,
       success: true,
       message: "Event created successfully",
       id: savedEvent.id,

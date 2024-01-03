@@ -2,14 +2,14 @@ import moment from "moment";
 import { is_debit, is_paid, loanType } from "../contentId.js";
 import loanLogsSchema from "../model/loanLogsSchema.js";
 import passbookSchema from "../model/passbookSchema.js";
-import { code201, code400 } from "../responseCode.js";
+import { code200, code400 } from "../responseCode.js";
 
 export const getLoanLog = async (request, response) => {
   const id = request.params.id;
   try {
     const details = await loanLogsSchema.findById(id);
     response.status(200).json({
-      code: code201,
+      code: code200,
       success: true,
       message: "Successful",
       data: details,
@@ -26,7 +26,7 @@ export const getAllLoanLog = async (request, response) => {
     const details = await loanLogsSchema.find();
     const totalRecords = details.length;
     response.status(200).json({
-      code: code201,
+      code: code200,
       success: true,
       message: "Successful",
       totalRecords: totalRecords,
@@ -51,8 +51,8 @@ export const addLoanLog = async (request, response) => {
 
     const savedLoanLog = await loanLogsSchema.create(loanLogData);
 
-    response.status(201).json({
-      code: code201,
+    response.status(200).json({
+      code: code200,
       success: true,
       message: "Loan Log created successfully",
       id: savedLoanLog.id,
@@ -79,7 +79,7 @@ export const deleteLoanLog = async (request, response) => {
     }
 
     response.status(200).json({
-      code: code201,
+      code: code200,
       success: true,
       message: "Loan Log deleted successfully",
     });
@@ -150,7 +150,7 @@ export const updateLoanLog = async (request, response) => {
       // Handle savedPassbook as needed
 
       response.status(200).json({
-        code: code201,
+        code: code200,
         success: true,
         message: "Emi Loan Paid successfully",
         updatedLoanLog,

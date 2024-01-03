@@ -1,12 +1,12 @@
 import fixedDepositLogsSchema from "../model/fixedDepositLogsSchema.js";
-import { code201, code400 } from "../responseCode.js";
+import { code200, code400 } from "../responseCode.js";
 
 export const getFixedDepositLog = async (request, response) => {
   const id = request.params.id;
   try {
     const details = await fixedDepositLogsSchema.findById(id);
     response.status(200).json({
-      code: code201,
+      code: code200,
       success: true,
       message: "Successful",
       data: details,
@@ -21,7 +21,7 @@ export const getAllFixedDepositLog = async (request, response) => {
     const details = await fixedDepositLogsSchema.find();
     const totalRecords = details.length;
     response.status(200).json({
-      code: code201,
+      code: code200,
       success: true,
       message: "Successful",
       totalRecords: totalRecords,
@@ -42,8 +42,8 @@ export const addFixedDepositLog = async (request, response) => {
 
     const savedFixedDeposit = await fixedDepositLogsSchema.create(fixedDepositData);
 
-    response.status(201).json({
-      code: code201,
+    response.status(200).json({
+      code: code200,
       success: true,
       message: "Fixed Deposit paid successfully",
       id: savedFixedDeposit.id,
@@ -77,7 +77,7 @@ export const updateFixedDepositLog = async (request, response) => {
     }
 
     response.status(200).json({
-      code: code201,
+      code: code200,
       success: true,
       message: "Paid Fixed Deposit updated successfully",
       updatedFixedDeposit,
@@ -102,7 +102,7 @@ export const deleteFixedDepositLog = async (request, response) => {
     }
 
     response.status(200).json({
-      code: code201,
+      code: code200,
       success: true,
       message: "Paid Fixed Deposit details deleted successfully",
     });

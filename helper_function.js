@@ -1,4 +1,5 @@
 import moment from "moment";
+import eventSchema from "./model/eventSchema.js";
 
 export const calculateEmiDates = (endDate, duration) => {
   const emiDates = [];
@@ -70,3 +71,20 @@ export const calculateDynamicEmiDates = (duration) => {
 
   return emiDates;
 };
+
+export const getEventStars = async (eventId) => {
+  try {
+    const eventDetails = await eventSchema.findById({ _id: eventId });
+
+    if (!eventDetails) {
+      throw new Error("Event not found");
+    }
+
+    // console.log("Stars from getEventStars:", eventDetails.stars); // Add this line for debugging
+
+    return eventDetails.stars;
+  } catch (error) {
+    throw new Error(`Error getting event stars: ${error.message}`);
+  }
+}
+

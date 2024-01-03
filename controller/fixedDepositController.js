@@ -3,7 +3,7 @@ import moment from "moment";
 import fixedDepositSchema from "../model/fixedDepositSchema.js";
 import fixedDepositLogsSchema from "../model/fixedDepositLogsSchema.js";
 import passbookSchema from "../model/passbookSchema.js";
-import { code201, code400 } from "../responseCode.js";
+import { code200, code400 } from "../responseCode.js";
 import { FDType, fdStatus_MATURED, is_credit } from "../contentId.js";
 
 export const getFixedDeposit = async (request, response) => {
@@ -25,7 +25,7 @@ export const getFixedDeposit = async (request, response) => {
 
 
     response.status(200).json({
-      code: code201,
+      code: code200,
       success: true,
       message: "successful",
       data: details,
@@ -43,7 +43,7 @@ export const getAllFixedDeposit = async (request, response) => {
     const details = await fixedDepositSchema.find();
     const totalRecords = details.length;
     response.status(200).json({
-      code: code201,
+      code: code200,
       success: true,
       message: "successful",
       totalRecords: totalRecords,
@@ -84,7 +84,7 @@ export const updateFixedDeposit = async (request, response) => {
     }
 
     response.status(200).json({
-      code: code201,
+      code: code200,
       success: true,
       message: "Fixed Deposit updated successfully",
       updatedFixedDeposit,
@@ -118,7 +118,7 @@ export const deleteFixedDeposit = async (request, response) => {
     const deletedPassbookEntries = await passbookSchema.deleteMany({ entryId: fixedDepositId });
 
     response.status(200).json({
-      code: code201,
+      code: code200,
       success: true,
       message: "Fixed Deposit deleted successfully",
     });
@@ -145,8 +145,8 @@ export const addFixedDeposit = async (request, response) => {
 
     const savedFixedDeposit = await fixedDepositSchema.create(fixedDepositData);
 
-    response.status(201).json({
-      code: code201,
+    response.status(200).json({
+      code: code200,
       success: true,
       message: "Fixed Deposit created successfully",
       id: savedFixedDeposit.id,
@@ -173,7 +173,7 @@ export const addFixedDepositLog = async (data, callback) => {
     );
 
     callback({
-      code: code201,
+      code: code200,
       success: true,
       message: "Fixed Deposit paid successfully",
       id: savedFixedDeposit.id,

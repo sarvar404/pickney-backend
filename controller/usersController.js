@@ -15,7 +15,7 @@ import { generateOTP } from "../service/generateOTP.js";
 import nodemailer from "nodemailer";
 import { Vonage } from "@vonage/server-sdk";
 import { KID, PARENT } from "../contentId.js";
-import { code201, code400 } from "../responseCode.js";
+import { code200, code400 } from "../responseCode.js";
 
 const vonage = new Vonage({
   apiKey: process.env.VONAGE_API_KEY,
@@ -323,7 +323,7 @@ export const reSetPassword = expressAsyncHandler(async (request, response) => {
 //     // const checkResponse = await vonage.verify.check(requestId, CODE);
 //     // console.log(checkResponse);
 
-//     response.status(201).json({
+//     response.status(200).json({
 //       success: true,
 //       message: 'User registration successful. OTP sent to the provided phone number.',
 //       id: savedUser._id,
@@ -773,7 +773,7 @@ export const getAllProfiles = async (request, response) => {
 
     const totalRecords = details.length;
     response.status(200).json({
-      code: code201,
+      code: code200,
       success: true,
       message: "Successful",
       totalRecords: totalRecords,
@@ -788,8 +788,8 @@ export const updateUserProfile = async (request, response) => {
   try {
 
     const { _id, email, name, guardian, phone, photo, address } = request.body;
-    const password = request.body.password; // Assuming you have a way to get the password
-    const passwordHash = await bcrypt.hash(password, 10);
+    // const password = request.body.password; // Assuming you have a way to get the password
+    // const passwordHash = await bcrypt.hash(password, 10);
 
     // Check if the provided email with role 'P' exists
     const existingUserP = await userSchema.findOne({ email, role: 'P' });
@@ -801,7 +801,7 @@ export const updateUserProfile = async (request, response) => {
         email,
         guardian,
         phone,
-        password: passwordHash,
+        // password: passwordHash,
         photo,
         role : PARENT,
         address,
@@ -839,7 +839,7 @@ export const updateUserProfile = async (request, response) => {
           email,
           guardian,
           phone,
-          password: passwordHash,
+          // password: passwordHash,
           photo,
           role : PARENT,
           address,

@@ -9,7 +9,7 @@ const router = express.Router();
 router.post("/kids/register", authSecurityHeader, kidRegister);
 router.post("/kids/login", authSecurityHeader, kidLogin);
 router.post("/kids/refresh", authSecurityHeader, refreshToken);
-router.put("/kids/update/:id", authSecurityHeader, kidUpdate);
+router.put("/kids/update", authSecurityHeader, kidUpdate);
 
 
 export default router;

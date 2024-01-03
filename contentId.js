@@ -3,6 +3,7 @@ export const KID = "K";
 
 export const loanType = "LOAN";
 export const FDType = "FD";
+export const StarType = "STAR_GRANTED";
 
 export const cancel = "CANCELLED";
 export const matured = "MATURED";

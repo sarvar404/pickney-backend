@@ -5,7 +5,6 @@ import { setKids } from "../service/auth.js";
 import bcrypt from "bcrypt";
 import {
   code200,
-  code201,
   code400,
   code500,
 } from "../responseCode.js";
@@ -153,8 +152,8 @@ export const kidRegister = async (request, response) => {
         newKid._id
       );
 
-      return response.status(201).json({
-        code: code201,
+      return response.status(200).json({
+        code: code200,
         success: true,
         message: "Kid added successfully",
         id: savedUser.uniqueId,
@@ -176,9 +175,9 @@ export const kidRegister = async (request, response) => {
 };
 
 export const kidUpdate = async (request, response) => {
-  const kidId = request.params.id;
-
   try {
+    const kidId = request.body._id;
+
     // Find the existing kid by ID
     const existingKid = await kidSchema.findById(kidId);
 
@@ -192,29 +191,24 @@ export const kidUpdate = async (request, response) => {
 
     // Check if the email is being updated to an existing email
     if (request.body.email && request.body.email !== existingKid.email) {
-      const emailExists = await kidSchema.findOne({
+      // Check if the email exists for other kids
+      const emailExistsInKids = await kidSchema.findOne({
+        email: request.body.email,
+        _id: { $ne: kidId }, // Exclude the current kid from the search
+      });
+
+      // Check if the email exists for other users
+      const emailExistsInUsers = await userSchema.findOne({
         email: request.body.email,
       });
 
-      if (emailExists) {
+      if (emailExistsInKids || emailExistsInUsers) {
         return response.status(400).json({
           code: code400,
           success: false,
           error: "Email already exists",
         });
       }
-    }
-
-    const existingUser = await userSchema.findOne({
-      email: request.body.email,
-    });
-
-    if (existingUser) {
-      return response.status(400).json({
-        code: code400,
-        success: false,
-        error: "Email already exists",
-      });
     }
 
     // Create an update object
@@ -234,7 +228,10 @@ export const kidUpdate = async (request, response) => {
     let upComingPassword = undefined;
     if (request.body.password) {
       const saltRounds = 10;
-      const passwordHash = await bcrypt.hash(request.body.password, saltRounds);
+      const passwordHash = await bcrypt.hash(
+        request.body.password,
+        saltRounds
+      );
       upComingPassword = passwordHash;
     }
 
@@ -244,7 +241,6 @@ export const kidUpdate = async (request, response) => {
     });
 
     // Call the function to update/add kid to the user
-
     const updatingIntoUser = await updateKidToUser(
       updatedKid,
       upComingPassword,
@@ -258,14 +254,14 @@ export const kidUpdate = async (request, response) => {
       data: updatedKid,
     });
   } catch (error) {
-    
     response.status(500).json({
       code: code400,
       success: false,
-      error: error.message
+      error: error.message,
     });
   }
 };
+
 
 export const kidLogin = async (request, response) => {
   try {

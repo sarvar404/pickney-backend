@@ -15,7 +15,7 @@ export const addDevice = async (request, response) => {
 
     const savedDevice = await deviceSchema.create(deviceData);
 
-    response.status(201).json({
+    response.status(200).json({
       success: true,
       message: "Device stored successfully",
       id: savedDevice.id,
