@@ -1,5 +1,5 @@
 import { StarType, is_credit, is_debit } from "../contentId.js";
-import { getEventStars } from "../helper_function.js";
+import { getEventStars, updateOrCreateKidBalance } from "../helper_function.js";
 import eventSchema from "../model/eventSchema.js";
 import grantStarsSchema from "../model/grantStarsSchema.js";
 import passbookSchema from "../model/passbookSchema.js";
@@ -112,8 +112,12 @@ export const updateEvent = async (data, callback) => {
 
 export const addPassbook = async (data) => {
   try {
+    // Assuming userId and kidId are properties of the data object
+    const get_availableBalance = await kidBalanceSchema.findOne({ userId: data.createdBy, kidId: data.kidId });
     
+    // Assuming getEventStars is a function that retrieves stars based on eventId
     const stars = await getEventStars(data.eventId);
+    
     const passbookData = {
       userId: data.createdBy,
       entryId: data._id,
@@ -121,10 +125,12 @@ export const addPassbook = async (data) => {
       status: "STAR GRANTED",
       remarks: data.remarks,
       balance_stars: stars,
+      available_balance: get_availableBalance ? get_availableBalance.available_balance : 0, // Use available_balance if found, otherwise default to 0
       photo: "http://dummy.jpg",
       is_credit: data.event_type, // Assuming is_credit is defined somewhere
     };
 
+    // Assuming passbookSchema is defined somewhere
     const savedPassbook = await passbookSchema.create(passbookData);
 
     return {
@@ -136,6 +142,7 @@ export const addPassbook = async (data) => {
     return { errorCode: code400, success: false, error: error.message };
   }
 };
+
 
 export const grantStar = async (request, response) => {
   try {
@@ -153,19 +160,29 @@ export const grantStar = async (request, response) => {
     const starGranted = await grantStarsSchema.create(starGrantedData);
 
     if (starGranted) {
-      updateEvent(starGranted, (result) => {
-        if (result.success) {
-          response.status(200).json({
-            code: code200,
-            success: true,
-            message: "Star granted successfully",
-            id: starGranted.id,
-            passbookResult: result.passbookResult,
-          });
-        } else {
-          response.status(400).json(result);
-        }
-      });
+      const isTotalDone = await updateOrCreateKidBalance(
+        starGranted.kidId,
+        starGranted.createdBy,
+        starGranted.values,
+        starGranted.event_type
+
+      );
+
+      if (isTotalDone) {
+        updateEvent(starGranted, (result) => {
+          if (result.success) {
+            response.status(200).json({
+              code: code200,
+              success: true,
+              message: "Star granted successfully",
+              id: starGranted.id,
+              passbookResult: result.passbookResult,
+            });
+          } else {
+            response.status(400).json(result);
+          }
+        });
+      }
     }
   } catch (error) {
     response.status(400).json({ errorCode: code400, success: false, error: error.message });

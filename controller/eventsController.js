@@ -6,6 +6,7 @@ import activitySchema from "../model/activitySchema.js";
 import dotenv from "dotenv";
 import { code200, code400 } from "../responseCode.js";
 import { is_active } from "../contentId.js";
+import mongoose from "mongoose";
 
 
 dotenv.config();
@@ -28,7 +29,7 @@ export const updateEvent = async (request, response) => {
       event_type: request.body.event_type,
       reward_type: request.body.reward_type,
       is_recurring: request.body.is_recurring,
-      tags: request.body.tags,
+      tags: request.body.tags ? JSON.stringify(request.body.tags) : undefined,
       is_auto_complete_event: request.body.is_auto_complete_event,
       frequency: request.body.frequency,
       max_count: request.body.max_count,
@@ -235,6 +236,9 @@ export const addActivity = async (event) => {
 
 export const addEvent = async (request, response) => {
   try {
+
+    // console.log(JSON.stringify(request.body.tags));
+    // process.exit();
     const eventData = {
       userId: request.body.userId,
       kidId: request.body.kidId,
@@ -243,20 +247,21 @@ export const addEvent = async (request, response) => {
       event_type: request.body.event_type,
       reward_type: request.body.reward_type,
       is_recurring: request.body.is_recurring,
-      tags: request.body.tags,
+      tags: request.body.tags ? JSON.stringify(request.body.tags) : undefined,
+
       is_auto_complete_event: request.body.is_auto_complete_event,
       frequency: request.body.frequency,
       max_count: request.body.max_count,
       start_at: request.body.start_at,
       end_at: request.body.end_at,
       status: request.body.status,
-      photo: request.body.photo, // Corrected to use request.body.photo
+      photo: request.body.photo,
     };
 
     const savedEvent = await eventSchema.create(eventData);
 
     if (savedEvent) {
-      await addActivity(savedEvent); // Await the addActivity function
+      await addActivity(savedEvent);
     }
 
     response.status(200).json({

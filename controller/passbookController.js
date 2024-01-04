@@ -5,7 +5,7 @@ const handleErrorResponse = (response, status, message) => {
   return response.status(status).json({ success: false, error: message });
 };
 
-export const addPassbook = async (request, response) => {
+export const a1addPassbook1 = async (request, response) => {
   return false;
   try {
     const passbookData = {
@@ -160,6 +160,34 @@ export const getCommonAcoountPassBookEntries = async (request, response) => {
     response
       .status(404)
       .json({ errorCode: code400, success: false, error: error.message });
+  }
+};
+
+// cron job passbook
+
+export const addPassbook = async (data, callback) => {
+  try {
+    const passbookData = {
+      userId: data.userId,
+      entryId: data.entryId,
+      entryType: FDType,
+      status: data.status,
+      remarks: "FD has been matured",
+      balance_stars: data.principal,
+      available_balance: data.available_balance,
+      photo: "http://dummy.jpg",
+      is_credit: is_credit,
+    };
+
+    const savedPassbook = await passbookSchema.create(passbookData);
+
+    callback({
+      success: true,
+      message: "Passbook created successfully",
+      id: savedPassbook.id,
+    });
+  } catch (error) {
+    callback({ errorCode: code400, success: false, error: error.message });
   }
 };
 

@@ -1,6 +1,7 @@
 import moment from "moment";
 import eventSchema from "./model/eventSchema.js";
 import kidBalanceSchema from "./model/kidBalanceSchema.js";
+import { is_credit, is_debit } from "./contentId.js";
 
 export const calculateEmiDates = (endDate, duration) => {
   const emiDates = [];
@@ -90,32 +91,44 @@ export const getEventStars = async (eventId) => {
 }
 
 // total ammount for kids helper
-export const updateOrCreateKidBalance = async (userId, kidId, available_balance) => {
+export const updateOrCreateKidBalance = async (userId, kidId, available_balance, type) => {
   try {
     // Check if kid balance already exists for the userId and kidId
     const existingKidBalance = await kidBalanceSchema.findOne({ userId, kidId });
 
     if (existingKidBalance) {
+      // Update available_balance based on the type
+      if (type === is_credit) {
+        existingKidBalance.available_balance += available_balance;
+      } else if (type === is_debit) {
+        existingKidBalance.available_balance -= available_balance;
+      }
 
-      const newAvailableBalance = existingKidBalance.available_balance + available_balance;
-      
-      // Update available_balance with the calculated value
-      existingKidBalance.available_balance = newAvailableBalance;
-      
+      // Save the updated kid balance
       await existingKidBalance.save();
+
       return existingKidBalance; // Return the updated kid balance
     } else {
       // Create a new kid balance record if it doesn't exist
+      let final_availableBalance = available_balance;
+
+      if (type === is_debit) {
+        // Set the initial available_balance to the negative value if is_debit
+        final_availableBalance *= -1;
+      }
+
       const newKidBalance = await kidBalanceSchema.create({
         userId,
         kidId,
-        available_balance,
+        available_balance: final_availableBalance,
       });
+
       return newKidBalance; // Return the newly created kid balance
     }
   } catch (error) {
     throw new Error(`Failed to update or create kid balance: ${error.message}`);
   }
 };
+
 
 

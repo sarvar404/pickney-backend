@@ -32,17 +32,17 @@ import { EventsImage, commonImage } from "./storageFileEnums.js";
 import { authSecurityHeader } from "./middlewares/middlewareAuth.js";
 import {
   addFixedDepositLog,
-  addPassbook,
 } from "./controller/fixedDepositController.js";
 
 // model
 import fixedDepositSchema from "./model/fixedDepositSchema.js";
 import eventSchema from "./model/eventSchema.js";
 // enums
-import { fdStatus_MATURED, is_active } from "./contentId.js";
+import { fdStatus_MATURED, is_active, is_credit } from "./contentId.js";
 import { addActivityCronJob } from "./controller/eventsController.js";
 import activitySchema from "./model/activitySchema.js";
 import { updateOrCreateKidBalance } from "./helper_function.js";
+import { addPassbook } from "./controller/passbookController.js";
 
 const upload = multer({
   dest: "uploads/",
@@ -273,7 +273,6 @@ app.post("/api/upload/events", upload.array("ps-img", 10), async (req, res) => {
   }
 });
 
-
 function generateBlobName(originalName) {
   const timestamp = new Date().getTime();
   return `${timestamp}_${originalName}`;
@@ -307,8 +306,9 @@ app.listen(PORT, () => {
 
 // */2 * * * * // each two minutes
 // 0 0 * * * // 12 am of each day
+
+// cron job for FD
 cron.schedule("*/2 * * * *", async () => {
-  return false;
   try {
     // console.log("get called");
     // Get all fixed deposits whose maturity date is today or has already passed
@@ -354,35 +354,45 @@ cron.schedule("*/2 * * * *", async () => {
         );
 
         // console.log(`Fixed Deposit ${deposit._id} is cancelled.`);
-      } else {
+      } else if (deposit.status === "ONGOING") {
         // Update the status of the fixed deposit
         deposit.status = fdStatus_MATURED;
         await deposit.save();
 
-        // Add the fixed deposit to the logs
-        addFixedDepositLog(
-          {
-            fdId: deposit._id,
-            principal: deposit.principal,
-            status: fdStatus_MATURED,
-          },
-          (logResponse) => {
-            // console.log(logResponse);
-          }
+        const isTotalDone = await updateOrCreateKidBalance(
+          deposit.kidId,
+          deposit.userId,
+          deposit.principal,
+          is_credit
         );
 
-        // Add an entry to the passbook
-        addPassbook(
-          {
-            userId: deposit.userId,
-            entryId: deposit._id,
-            status: deposit.status,
-            principal: deposit.principal,
-          },
-          (passbookResponse) => {
-            // console.log(passbookResponse);
-          }
-        );
+        if (isTotalDone) {
+          // Add the fixed deposit to the logs
+          addFixedDepositLog(
+            {
+              fdId: deposit._id,
+              principal: deposit.principal,
+              status: fdStatus_MATURED,
+            },
+            (logResponse) => {
+              // console.log(logResponse);
+            }
+          );
+
+          // Add an entry to the passbook
+          addPassbook(
+            {
+              userId: deposit.userId,
+              entryId: deposit._id,
+              status: deposit.status,
+              principal: deposit.principal,
+              available_balance: isTotalDone.available_balance,
+            },
+            (passbookResponse) => {
+              // console.log(passbookResponse);
+            }
+          );
+        }
 
         // console.log(`Fixed Deposit ${deposit._id} has matured.`);
       }
@@ -392,42 +402,18 @@ cron.schedule("*/2 * * * *", async () => {
   }
 });
 
-app.post("/testing", async (req, res) => {
-  try {
-    const totalEvents = await eventSchema.find();
 
-    for (const event of totalEvents) {
-      if (event.is_recurring && event.status === 1 && event.is_auto_complete_event === true) {
-        switch (event.frequency) {
-          case "D":
-            await processDailyEvent(event);
-            break;
-          case "W":
-            await processWeeklyEvent(event);
-            break;
-          case "M":
-            await processMonthlyEvent(event);
-            break;
-          default:
-            console.error(`Unsupported frequency: ${event.frequency}`);
-        }
-      }
-    }
-
-    // console.log("Cron job completed");
-    res.status(200).json({ success: true, message: "Cron job completed" });
-  } catch (error) {
-    // console.error("Cron Job Error:", error);
-    res.status(500).json({ success: false, error: "Internal Server Error" });
-  }
-});
-
+// cron job for all events type
 cron.schedule("*/2 * * * *", async () => {
   try {
     const totalEvents = await eventSchema.find();
 
     for (const event of totalEvents) {
-      if (event.is_recurring && event.status === 1 && event.is_auto_complete_event === true) {
+      if (
+        event.is_recurring &&
+        event.status === 1 &&
+        event.is_auto_complete_event === true
+      ) {
         switch (event.frequency) {
           case "D":
             await processDailyEvent(event);
@@ -452,7 +438,32 @@ cron.schedule("*/2 * * * *", async () => {
   }
 });
 
+const isEventAlive = async (event) => {
+  const currentDate = moment();
+  const eventEndDate = moment(event.end_at, "MM/DD/YYYY"); // Adjust the date format
+
+  // console.log("Current Date:", currentDate.format("DD/MM/YYYY"));
+  // console.log("Event End Date:", eventEndDate.format("DD/MM/YYYY"));
+
+  // console.log("Comparison Result:", currentDate.isSameOrBefore(eventEndDate, 'day'));
+
+  if (currentDate.isSameOrBefore(eventEndDate, "day")) {
+    // console.log("Setting status to 2");
+    // If current date is same as or before end_at date, update event status to 2 (inactive)
+    await eventSchema.findByIdAndUpdate(event._id, { status: 2 });
+    return { alive: false, status: 2 }; // Event is not alive
+  }
+
+  return { alive: true, status: event.status };
+};
+
 async function processDailyEvent(event) {
+  const isAliveData = await isEventAlive(event);
+  if (isAliveData.alive === false) {
+    return;
+  }
+  // Access the event status using isAliveData.status if needed
+
   const startDate = moment(event.start_at, "DD/MM/YYYY").add(1, "day"); // Start one day ahead of the current date
   const endDate = startDate.clone().add(2, "days"); // endDate is three days ahead of startDate
 
@@ -517,6 +528,10 @@ async function processDailyEvent(event) {
 }
 
 async function processWeeklyEvent(event) {
+  const isAliveData = await isEventAlive(event);
+  if (!isAliveData.alive) {
+    return;
+  }
   const latestActivities = await activitySchema
     .find({
       eventId: event._id,
@@ -569,6 +584,10 @@ async function processWeeklyEvent(event) {
 }
 // changes...
 async function processMonthlyEvent(event) {
+  const isAliveData = await isEventAlive(event);
+  if (!isAliveData.alive) {
+    return;
+  }
   const latestActivities = await activitySchema
     .find({
       eventId: event._id,
@@ -628,13 +647,16 @@ async function processMonthlyEvent(event) {
   }
 }
 
+
+// crone job for event's activities
 cron.schedule("*/5 * * * *", async () => {
+  return false;
   try {
     const currentDate = moment();
 
     // Find activities where end_at is on or before the current date and status is 1
     const activitiesToUpdate = await activitySchema.find({
-      end_at: { $lte: currentDate.format('DD/MM/YYYY') },
+      end_at: { $lte: currentDate.format("DD/MM/YYYY") },
       status: 1,
     });
 
@@ -657,19 +679,32 @@ cron.schedule("*/5 * * * *", async () => {
     });
   }
 });
+
 app.put("/status", async (request, response) => {
   try {
     const currentDate = moment();
 
     // Find activities where end_at is on or before the current date and status is 1
     const activitiesToUpdate = await activitySchema.find({
-      end_at: { $lte: currentDate.format('DD/MM/YYYY') },
+      end_at: { $lte: currentDate.format("DD/MM/YYYY") },
       status: 1,
     });
 
     // Update the status of matching activities to 2 (inactive)
     const updatePromises = activitiesToUpdate.map(async (activity) => {
-      await activitySchema.updateOne({ _id: activity._id }, { status: 2 });
+      const singleActivityUpdated = await activitySchema.updateOne({ _id: activity._id }, { status: 2 });
+      if (singleActivityUpdated) {
+        const isTotalDone = await updateOrCreateKidBalance(
+          deposit.kidId,
+          deposit.userId,
+          deposit.principal,
+          is_credit
+        );
+
+        if (isTotalDone) {
+          
+        }
+      }
     });
 
     // Wait for all updates to complete
@@ -686,98 +721,5 @@ app.put("/status", async (request, response) => {
     });
   }
 });
-
-app.get("/testing123", async (request, response) => {
-  try {
-    // console.log("get called");
-    // Get all fixed deposits whose maturity date is today or has already passed
-    const today = moment().format("MM/DD/YYYY");
-    const depositsToMature = await fixedDepositSchema.find({
-      $or: [
-        { end_at: today },
-        { end_at: { $lt: today } }, // Check for past dates
-        { status: "ONGOING" }, // Check for "ONGOING" status
-      ],
-      status: { $ne: "MATURED" }, // Exclude records with "MATURED" status
-    });
-    // Process each deposit to update status and perform additional actions
-    depositsToMature.forEach(async (deposit) => {
-      // Check if the fixed deposit is cancelled
-      if (deposit.status === "CANCELLED") {
-        // Update the status for addFixedDepositLog and addPassbook
-        const cancelledStatus = "CANCELLED";
-
-        // Add the fixed deposit to the logs
-        addFixedDepositLog(
-          {
-            fdId: deposit._id,
-            principal: deposit.principal,
-            status: cancelledStatus,
-          },
-          (logResponse) => {
-            // console.log(logResponse);
-          }
-        );
-
-        // Add an entry to the passbook
-        addPassbook(
-          {
-            userId: deposit.userId,
-            entryId: deposit._id,
-            status: cancelledStatus,
-            principal: deposit.principal,
-          },
-          (passbookResponse) => {
-            // console.log(passbookResponse);
-          }
-        );
-
-        // console.log(`Fixed Deposit ${deposit._id} is cancelled.`);
-      } else if (deposit.status === "ONGOING") {
-        // Update the status of the fixed deposit
-        deposit.status = fdStatus_MATURED;
-        await deposit.save();
-
-        
-
-        const isTotalDone = await updateOrCreateKidBalance(deposit.kidId,deposit.userId,deposit.principal);
-        
-        if (isTotalDone) {
-            // Add the fixed deposit to the logs
-            addFixedDepositLog(
-              {
-                fdId: deposit._id,
-                principal: deposit.principal,
-                status: fdStatus_MATURED,
-              },
-              (logResponse) => {
-                // console.log(logResponse);
-              }
-            );
-  
-            // Add an entry to the passbook
-            addPassbook(
-              {
-                userId: deposit.userId,
-                entryId: deposit._id,
-                status: deposit.status,
-                principal: deposit.principal,
-                available_balance: isTotalDone.available_balance,
-              },
-              (passbookResponse) => {
-                // console.log(passbookResponse);
-              }
-            );
-        }
-
-        // console.log(`Fixed Deposit ${deposit._id} has matured.`);
-      }
-    });
-  } catch (error) {
-    console.error("Cron Job Error:", error.message);
-  }
-});
-
-
 
 // ... (rest of your code)

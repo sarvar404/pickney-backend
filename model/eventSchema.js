@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { eventTb, kidTb, userTb } from "../tbEnums.js";
+import { eventTb, kidTb, tagsTb, userTb } from "../tbEnums.js";
 
 const eventSchema = new mongoose.Schema(
   {
@@ -38,8 +38,7 @@ const eventSchema = new mongoose.Schema(
       required: true,
     },
     tags: {
-      type: [String],
-      // Assuming the tags are strings representing IDs
+      type: [String], // Change to String
     },
     is_auto_complete_event: {
       type: Boolean,
