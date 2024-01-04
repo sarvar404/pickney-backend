@@ -6,22 +6,19 @@ import activitySchema from "../model/activitySchema.js";
 import dotenv from "dotenv";
 import { code200, code400 } from "../responseCode.js";
 import { is_active } from "../contentId.js";
-import mongoose from "mongoose";
-
+import tagSchema from "../model/tagSchema.js";
 
 dotenv.config();
-
 
 export const updateEvent = async (request, response) => {
   try {
     // const eventId = request.params.id; // Assuming the ID is provided in the URL params
     const eventId = request.body.id;
-    
+
     const existingActivities = await activitySchema.find({ eventId });
     if (existingActivities) {
       await activitySchema.deleteMany({ eventId });
     }
-    
 
     const updatedEventData = {
       name: request.body.name,
@@ -29,7 +26,7 @@ export const updateEvent = async (request, response) => {
       event_type: request.body.event_type,
       reward_type: request.body.reward_type,
       is_recurring: request.body.is_recurring,
-      tags: request.body.tags ? JSON.stringify(request.body.tags) : undefined,
+      tags: request.body.tags,
       is_auto_complete_event: request.body.is_auto_complete_event,
       frequency: request.body.frequency,
       max_count: request.body.max_count,
@@ -47,11 +44,11 @@ export const updateEvent = async (request, response) => {
 
     if (!updatedEvent) {
       return response.status(404).json({
-        errorCode : code400, 
+        errorCode: code400,
         success: false,
         message: "Event not found",
       });
-    }else {
+    } else {
       await addActivity(updatedEvent); // Await the addActivity function
 
       response.status(200).json({
@@ -61,11 +58,11 @@ export const updateEvent = async (request, response) => {
       });
     }
   } catch (error) {
-    response.status(400).json({ errorCode : code400, success: false, error: error.message });
+    response
+      .status(400)
+      .json({ errorCode: code400, success: false, error: error.message });
   }
 };
-
-
 
 export const deleteEvent = async (request, response) => {
   try {
@@ -75,7 +72,7 @@ export const deleteEvent = async (request, response) => {
 
     if (!deletedEvent) {
       return response.status(404).json({
-        errorCode : code400, 
+        errorCode: code400,
         success: false,
         message: "Event not found",
       });
@@ -83,13 +80,23 @@ export const deleteEvent = async (request, response) => {
 
     response.status(200).json({
       success: true,
-      message: "Event deleted successfully"
+      message: "Event deleted successfully",
     });
   } catch (error) {
-    response.status(400).json({ errorCode : code400, success: false, error: error.message });
+    response
+      .status(400)
+      .json({ errorCode: code400, success: false, error: error.message });
   }
 };
 
+export const getTagDetailsByIds = async (tagIds) => {
+  try {
+    const tagDetails = await tagSchema.find({ _id: { $in: tagIds } });
+    return tagDetails;
+  } catch (error) {
+    throw new Error(`Failed to fetch tag details: ${error.message}`);
+  }
+};
 
 export const getSingleEvent = async (request, response) => {
   const eventId = request.params.id;
@@ -106,6 +113,9 @@ export const getSingleEvent = async (request, response) => {
       });
     }
 
+    // Fetch tag details based on tag ids
+    const tagDetails = await getTagDetailsByIds(eventDetails.tags);
+
     // Fetch activities based on the event ID
     const activities = await activitySchema.find({ eventId });
 
@@ -113,7 +123,7 @@ export const getSingleEvent = async (request, response) => {
       code: code200,
       success: true,
       message: "Successful",
-      event: eventDetails,
+      event: { ...eventDetails._doc, tags: tagDetails }, // Combine event details with tag details
       activities,
     });
   } catch (error) {
@@ -128,16 +138,28 @@ export const getSingleEvent = async (request, response) => {
 export const getAllEventList = async (request, response) => {
   try {
     const details = await eventSchema.find();
-    const totalRecords = details.length;
+
+    // Fetch tag details for each event
+    const eventsWithTags = await Promise.all(
+      details.map(async (event) => {
+        const tagDetails = await getTagDetailsByIds(event.tags);
+        return { ...event._doc, tags: tagDetails };
+      })
+    );
+
+    const totalRecords = eventsWithTags.length;
+
     response.status(200).json({
       code: code200,
       success: true,
       message: "Successful",
       totalRecords: totalRecords,
-      data: details,
+      data: eventsWithTags,
     });
   } catch (err) {
-    response.status(404).json({ errorCode: code400, success: false, error: "Not found" });
+    response
+      .status(404)
+      .json({ errorCode: code400, success: false, error: "Not found" });
   }
 };
 
@@ -152,11 +174,19 @@ export const getActivitiesByDate = async (request, response) => {
       status: 1,
     });
 
+    // Fetch tag details for each event
+    const eventsWithTags = await Promise.all(
+      events.map(async (event) => {
+        const tagDetails = await getTagDetailsByIds(event.tags);
+        return { ...event._doc, tags: tagDetails };
+      })
+    );
+
     response.status(200).json({
       code: code200,
       success: true,
-      message: "events fetched successfully",
-      events,
+      message: "Events fetched successfully",
+      events: eventsWithTags,
     });
   } catch (error) {
     response.status(500).json({
@@ -166,8 +196,6 @@ export const getActivitiesByDate = async (request, response) => {
     });
   }
 };
-
-
 
 export const addActivityCronJob = async (data) => {
   try {
@@ -198,8 +226,6 @@ export const addActivityCronJob = async (data) => {
     };
   }
 };
-
-
 
 export const addActivity = async (event) => {
   try {
@@ -233,12 +259,8 @@ export const addActivity = async (event) => {
   }
 };
 
-
 export const addEvent = async (request, response) => {
   try {
-
-    // console.log(JSON.stringify(request.body.tags));
-    // process.exit();
     const eventData = {
       userId: request.body.userId,
       kidId: request.body.kidId,
@@ -247,8 +269,7 @@ export const addEvent = async (request, response) => {
       event_type: request.body.event_type,
       reward_type: request.body.reward_type,
       is_recurring: request.body.is_recurring,
-      tags: request.body.tags ? JSON.stringify(request.body.tags) : undefined,
-
+      tags: request.body.tags,
       is_auto_complete_event: request.body.is_auto_complete_event,
       frequency: request.body.frequency,
       max_count: request.body.max_count,
@@ -280,11 +301,7 @@ export const addEvent = async (request, response) => {
   }
 };
 
-
-
 // DEFAULT ................
-
-
 
 export const addEventDefault = async (request, response) => {
   try {
@@ -309,7 +326,9 @@ export const addEventDefault = async (request, response) => {
       id: savedEvent.id,
     });
   } catch (error) {
-    response.status(400).json({ errorCode: code400, success: false, error: error.message });
+    response
+      .status(400)
+      .json({ errorCode: code400, success: false, error: error.message });
   }
 };
 
@@ -348,7 +367,9 @@ export const updateEventDefault = async (request, response) => {
       updatedEvent,
     });
   } catch (error) {
-    response.status(400).json({ errorCode: code400, success: false, error: error.message });
+    response
+      .status(400)
+      .json({ errorCode: code400, success: false, error: error.message });
   }
 };
 
@@ -371,7 +392,8 @@ export const deleteEventDefault = async (request, response) => {
       message: "Event deleted successfully",
     });
   } catch (error) {
-    response.status(400).json({ errorCode: code400, success: false, error: error.message });
+    response
+      .status(400)
+      .json({ errorCode: code400, success: false, error: error.message });
   }
 };
-

@@ -37,9 +37,10 @@ const eventSchema = new mongoose.Schema(
       default: true,
       required: true,
     },
-    tags: {
-      type: [String], // Change to String
-    },
+    tags: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: tagsTb // Make sure this matches the model name of your tagSchema
+    }],
     is_auto_complete_event: {
       type: Boolean,
     },

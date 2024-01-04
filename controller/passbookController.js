@@ -1,3 +1,4 @@
+import { FDType, is_credit } from "../contentId.js";
 import passbookSchema from "../model/passbookSchema.js";
 import { code200, code400 } from "../responseCode.js";
 
@@ -173,7 +174,7 @@ export const addPassbook = async (data, callback) => {
       entryType: FDType,
       status: data.status,
       remarks: "FD has been matured",
-      balance_stars: data.principal,
+      balance_stars: data.balance_stars,
       available_balance: data.available_balance,
       photo: "http://dummy.jpg",
       is_credit: is_credit,

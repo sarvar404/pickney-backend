@@ -95,7 +95,6 @@ export const updateOrCreateKidBalance = async (userId, kidId, available_balance,
   try {
     // Check if kid balance already exists for the userId and kidId
     const existingKidBalance = await kidBalanceSchema.findOne({ userId, kidId });
-
     if (existingKidBalance) {
       // Update available_balance based on the type
       if (type === is_credit) {

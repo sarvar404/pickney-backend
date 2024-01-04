@@ -41,9 +41,8 @@ app.get("/testing123", async (request, response) => {
       ],
       status: { $ne: "MATURED" }, // Exclude records with "MATURED" status
     });
-    // Process each deposit to update status and perform additional actions
-    depositsToMature.forEach(async (deposit) => {
-      // Check if the fixed deposit is cancelled
+
+    for (const deposit of depositsToMature) {
       if (deposit.status === "CANCELLED") {
         // Update the status for addFixedDepositLog and addPassbook
         const cancelledStatus = "CANCELLED";
@@ -66,7 +65,7 @@ app.get("/testing123", async (request, response) => {
             userId: deposit.userId,
             entryId: deposit._id,
             status: cancelledStatus,
-            principal: deposit.principal,
+            balance_stars: deposit.principal,
           },
           (passbookResponse) => {
             // console.log(passbookResponse);
@@ -77,45 +76,48 @@ app.get("/testing123", async (request, response) => {
       } else if (deposit.status === "ONGOING") {
         // Update the status of the fixed deposit
         deposit.status = fdStatus_MATURED;
-        await deposit.save();
+        const doneDeposit = await deposit.save();
 
-        const isTotalDone = await updateOrCreateKidBalance(
-          deposit.kidId,
-          deposit.userId,
-          deposit.principal
-        );
-
-        if (isTotalDone) {
-          // Add the fixed deposit to the logs
-          addFixedDepositLog(
-            {
-              fdId: deposit._id,
-              principal: deposit.principal,
-              status: fdStatus_MATURED,
-            },
-            (logResponse) => {
-              // console.log(logResponse);
-            }
+        if (doneDeposit) {
+          const isTotalDone = await updateOrCreateKidBalance(
+            doneDeposit.userId,
+            doneDeposit.kidId,
+            doneDeposit.principal,
+            is_credit
           );
 
-          // Add an entry to the passbook
-          addPassbook(
-            {
-              userId: deposit.userId,
-              entryId: deposit._id,
-              status: deposit.status,
-              principal: deposit.principal,
-              available_balance: isTotalDone.available_balance,
-            },
-            (passbookResponse) => {
-              // console.log(passbookResponse);
-            }
-          );
+          if (isTotalDone) {
+            // Add the fixed deposit to the logs
+            addFixedDepositLog(
+              {
+                fdId: doneDeposit._id,
+                principal: doneDeposit.principal,
+                status: fdStatus_MATURED,
+              },
+              (logResponse) => {
+                // console.log(logResponse);
+              }
+            );
+
+            // Add an entry to the passbook
+            addPassbook(
+              {
+                userId: doneDeposit.userId,
+                entryId: doneDeposit._id,
+                status: doneDeposit.status,
+                balance_stars: doneDeposit.principal,
+                available_balance: isTotalDone.available_balance,
+              },
+              (passbookResponse) => {
+                // console.log(passbookResponse);
+              }
+            );
+          }
         }
 
         // console.log(`Fixed Deposit ${deposit._id} has matured.`);
       }
-    });
+    }
   } catch (error) {
     console.error("Cron Job Error:", error.message);
   }
