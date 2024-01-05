@@ -143,10 +143,9 @@ app.post(
             // Construct the URL with the SAS token
             const imageUrl = blobService.getUrl(
               commonImage,
-              blobName,
-              sasToken
+              blobName
+              // sasToken
             );
-
             return res.status(200).json({
               success: true,
               message: "File uploaded successfully",
@@ -170,6 +169,7 @@ app.post(
     }
   }
 );
+
 app.post("/api/upload/events", upload.array("ps-img", 10), async (req, res) => {
   try {
     const files = req.files;
@@ -221,8 +221,8 @@ app.post("/api/upload/events", upload.array("ps-img", 10), async (req, res) => {
 
               const imageUrl = blobService.getUrl(
                 EventsImage,
-                blobName,
-                sasToken
+                blobName
+                // sasToken // will expire
               );
 
               // Resolve with the modified response format
@@ -659,82 +659,57 @@ cron.schedule("*/5 * * * *", async () => {
     });
 
     // Update the status of matching activities to 2 (inactive)
-    const updatePromises = activitiesToUpdate.map(async (activity) => {
-      await activitySchema.updateOne({ _id: activity._id }, { status: 2 });
-    });
+    const updatePromises = [];
 
-    // Wait for all updates to complete
-    await Promise.all(updatePromises);
-
-    response.status(200).json({
-      success: true,
-      message: "Activity statuses updated successfully",
-    });
-  } catch (error) {
-    response.status(500).json({
-      success: false,
-      error: error.message,
-    });
-  }
-});
-
-app.put("/status", async (request, response) => {
-  try {
-    const currentDate = moment();
-
-    // Find activities where end_at is on or before the current date and status is 1
-    const activitiesToUpdate = await activitySchema.find({
-      end_at: { $lte: currentDate.format("DD/MM/YYYY") },
-      status: 1,
-    });
-
-    // Update the status of matching activities to 2 (inactive)
-    const updatePromises = activitiesToUpdate.map(async (activity) => {
-      const singleActivityUpdated = await activitySchema.updateOne(
+    for (const activity of activitiesToUpdate) {
+      const singleActivityUpdated = await activitySchema.findOneAndUpdate(
         { _id: activity._id },
-        { status: 2 }
+        { status: 2 },
+        { new: true } // This option returns the modified document
       );
+
       if (singleActivityUpdated) {
-        const eventDetails = await getEventStars(singleActivityUpdated.eventId);
-        const isTotalDone = await updateOrCreateKidBalance(
-          eventDetails.userId,
-          eventDetails.kidId,
-          eventDetails.stars,
-          is_credit
+        const eventDetails = await getEventDetails(
+          singleActivityUpdated.eventId
         );
 
-        if (isTotalDone) {
-          addPassbook(
-            {
-              userId: eventDetails.userId,
-              entryId: eventDetails._id,
-              status: `ACTIVITY OF ${eventDetails.name}`,
-              balance_stars: eventDetails.stars,
-              available_balance: isTotalDone.available_balance,
-            },
-            (passbookResponse) => {
-              // console.log(passbookResponse);
-            }
+        if (eventDetails) {
+          const isTotalDone = await updateOrCreateKidBalance(
+            eventDetails.userId,
+            eventDetails.kidId,
+            eventDetails.stars,
+            is_credit
           );
+
+          if (isTotalDone) {
+            addPassbook(
+              {
+                userId: eventDetails.userId,
+                entryId: eventDetails._id,
+                status: `ACTIVITY OF ${eventDetails.name}`,
+                balance_stars: eventDetails.stars,
+                available_balance: isTotalDone.available_balance,
+              },
+              (passbookResponse) => {
+                // console.log(passbookResponse);
+              }
+            );
+          }
         }
       }
-    });
-
-    // Wait for all updates to complete
-    await Promise.all(updatePromises);
+    }
 
     response.status(200).json({
       success: true,
       message: "Activity statuses updated successfully",
     });
   } catch (error) {
+    console.log(error);
     response.status(500).json({
       success: false,
       error: error.message,
     });
   }
 });
-
-
 
 // ... (rest of your code)

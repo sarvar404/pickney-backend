@@ -1,5 +1,11 @@
 import { StarType, is_credit, is_debit } from "../contentId.js";
-import { getEventStars, updateOrCreateKidBalance } from "../helper_function.js";
+import {
+  
+  balanceCanWithdraw,
+  getEventStars,
+  getTotalBalance,
+  updateOrCreateKidBalance,
+} from "../helper_function.js";
 import eventSchema from "../model/eventSchema.js";
 import grantStarsSchema from "../model/grantStarsSchema.js";
 import passbookSchema from "../model/passbookSchema.js";
@@ -73,10 +79,12 @@ export const deleteGrantedKid = async (request, response) => {
   }
 };
 
+// KEEP THIS ASIDE FOR NOW
 export const updateEvent = async (data, callback) => {
+  return false;
   try {
     const eventId = data.eventId;
-    
+
     const stars = await getEventStars(eventId);
 
     let totalStars = 0;
@@ -86,8 +94,6 @@ export const updateEvent = async (data, callback) => {
     } else if (data.event_type === is_debit) {
       totalStars = stars - data.values;
     }
-
-    
 
     const updatedEventData = {
       stars: totalStars,
@@ -101,7 +107,12 @@ export const updateEvent = async (data, callback) => {
 
     if (updatedEvent) {
       const passbookResult = await addPassbook(data);
-      callback({ success: true, message: "Event updated successfully", updatedEvent, passbookResult });
+      callback({
+        success: true,
+        message: "Event updated successfully",
+        updatedEvent,
+        passbookResult,
+      });
     } else {
       throw new Error("Event not found");
     }
@@ -110,77 +121,70 @@ export const updateEvent = async (data, callback) => {
   }
 };
 
-export const addPassbook = async (data) => {
+export const addPassbook = async (data, grantedData, callback) => {
   try {
-    // Assuming userId and kidId are properties of the data object
-    const get_availableBalance = await kidBalanceSchema.findOne({ userId: data.createdBy, kidId: data.kidId });
-    
-    // Assuming getEventStars is a function that retrieves stars based on eventId
-    const stars = await getEventStars(data.eventId);
-    
+    const getAvailableBalance = await getTotalBalance(data.userId, data.kidId);
+
     const passbookData = {
-      userId: data.createdBy,
-      entryId: data._id,
-      entryType: StarType, // Assuming StarType is defined somewhere
-      status: "STAR GRANTED",
-      remarks: data.remarks,
-      balance_stars: stars,
-      available_balance: get_availableBalance ? get_availableBalance.available_balance : 0, // Use available_balance if found, otherwise default to 0
+      userId: grantedData.createdBy,
+      entryId: grantedData._id,
+      entryType: "StarType", // Assuming StarType is defined somewhere
+      status: `STAR GRANTED FOR ${grantedData.event_name}`,
+      remarks: grantedData.remarks,
+      balance_stars: grantedData.values,
+      available_balance: getAvailableBalance ? getAvailableBalance.available_balance : 0,
       photo: "http://dummy.jpg",
-      is_credit: data.event_type, // Assuming is_credit is defined somewhere
+      is_credit: grantedData.event_type, // Assuming is_credit is defined somewhere
     };
 
-    // Assuming passbookSchema is defined somewhere
     const savedPassbook = await passbookSchema.create(passbookData);
 
-    return {
+    const response = {
       success: true,
       message: "Passbook created successfully",
       id: savedPassbook.id,
     };
+
+    callback(response);
   } catch (error) {
-    return { errorCode: code400, success: false, error: error.message };
+    const response = { errorCode: code400, success: false, error: error.message };
+    callback(response);
   }
 };
 
-
 export const grantStar = async (request, response) => {
   try {
+    const { event_type, createdBy, kidId, eventId, values } = request.body;
+
+    if (event_type === is_debit) {
+      const amountIsSufficient = await balanceCanWithdraw(createdBy, kidId, values);
+      if (!amountIsSufficient) {
+        return response.status(400).json({
+          errorCode: code400,
+          success: false,
+          error: "Insufficient balance",
+        });
+      }
+    }
+
     const starGrantedData = {
-      createdBy: request.body.createdBy,
-      kidId: request.body.kidId,
-      eventId: request.body.eventId,
+      createdBy,
+      kidId,
+      eventId,
       event_name: request.body.event_name,
-      event_type: request.body.event_type,
+      event_type,
       is_recurring: request.body.is_recurring,
-      values: request.body.values,
+      values,
       remarks: request.body.remarks,
     };
 
     const starGranted = await grantStarsSchema.create(starGrantedData);
 
     if (starGranted) {
-      const isTotalDone = await updateOrCreateKidBalance(
-        starGranted.kidId,
-        starGranted.createdBy,
-        starGranted.values,
-        starGranted.event_type
-
-      );
-
+      const isTotalDone = await updateOrCreateKidBalance(starGranted.createdBy, starGranted.kidId, starGranted.values, starGranted.event_type);
       if (isTotalDone) {
-        updateEvent(starGranted, (result) => {
-          if (result.success) {
-            response.status(200).json({
-              code: code200,
-              success: true,
-              message: "Star granted successfully",
-              id: starGranted.id,
-              passbookResult: result.passbookResult,
-            });
-          } else {
-            response.status(400).json(result);
-          }
+        await addPassbook(isTotalDone, starGranted, (passbookResponse) => {
+          response.status(200).json(passbookResponse);
         });
       }
     }
@@ -188,5 +192,3 @@ export const grantStar = async (request, response) => {
     response.status(400).json({ errorCode: code400, success: false, error: error.message });
   }
 };
-
-

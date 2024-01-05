@@ -155,3 +155,68 @@ app.post("/testing", async (req, res) => {
       res.status(500).json({ success: false, error: "Internal Server Error" });
     }
   });
+
+
+  // working
+
+  app.put("/status", async (request, response) => {
+    try {
+      const currentDate = moment();
+  
+      // Find activities where end_at is on or before the current date and status is 1
+      const activitiesToUpdate = await activitySchema.find({
+        end_at: { $lte: currentDate.format("DD/MM/YYYY") },
+        status: 1,
+      });
+  
+      // Update the status of matching activities to 2 (inactive)
+      const updatePromises = [];
+  
+      for (const activity of activitiesToUpdate) {
+        const singleActivityUpdated = await activitySchema.findOneAndUpdate(
+          { _id: activity._id },
+          { status: 2 },
+          { new: true } // This option returns the modified document
+        );
+  
+        if (singleActivityUpdated) {
+          const eventDetails = await getEventDetails(singleActivityUpdated.eventId);
+          console.log(eventDetails);
+          if (eventDetails) {
+            const isTotalDone = await updateOrCreateKidBalance(
+              eventDetails.userId,
+              eventDetails.kidId,
+              eventDetails.stars,
+              is_credit
+            );
+  
+            if (isTotalDone) {
+              addPassbook(
+                {
+                  userId: eventDetails.userId,
+                  entryId: eventDetails._id,
+                  status: `ACTIVITY OF ${eventDetails.name}`,
+                  balance_stars: eventDetails.stars,
+                  available_balance: isTotalDone.available_balance,
+                },
+                (passbookResponse) => {
+                  // console.log(passbookResponse);
+                }
+              );
+            }
+          }
+        }
+      }
+  
+      response.status(200).json({
+        success: true,
+        message: "Activity statuses updated successfully",
+      });
+    } catch (error) {
+      console.log(error)
+      response.status(500).json({
+        success: false,
+        error: error.message,
+      });
+    }
+  });

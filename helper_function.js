@@ -90,6 +90,38 @@ export const getEventStars = async (eventId) => {
   }
 }
 
+export const getEventDetails = async (eventId) => {
+  try {
+    const eventDetails = await eventSchema.findById({ _id: eventId });
+
+    if (!eventDetails) {
+      throw new Error("Event not found");
+    }
+
+    // console.log("Stars from getEventStars:", eventDetails.stars); // Add this line for debugging
+
+    return eventDetails;
+  } catch (error) {
+    throw new Error(`Error getting event stars: ${error.message}`);
+  }
+}
+
+export const getTotalBalance = async (userId, kidId) => {
+  try {
+    const kidBalanceDetails = await kidBalanceSchema.findOne({ userId, kidId });
+
+    if (!kidBalanceDetails) {
+      return 0; // Return zero if kid balance record is not found
+    }
+
+    // console.log("Available Balance:", kidBalanceDetails.available_balance); // Add this line for debugging
+
+    return kidBalanceDetails.available_balance;
+  } catch (error) {
+    throw new Error(`Error getting available balance: ${error.message}`);
+  }
+};
+
 // total ammount for kids helper
 export const updateOrCreateKidBalance = async (userId, kidId, available_balance, type) => {
   try {
@@ -128,6 +160,25 @@ export const updateOrCreateKidBalance = async (userId, kidId, available_balance,
     throw new Error(`Failed to update or create kid balance: ${error.message}`);
   }
 };
+
+
+export const balanceCanWithdraw = async (userId, kidId, amount) => {
+  try {
+    const kidBalanceDetails = await kidBalanceSchema.findOne({ userId, kidId });
+
+    if (!kidBalanceDetails) {
+      throw new Error("Kid balance not found");
+    }
+
+    // Return true if the available balance is sufficient, otherwise, return false
+    return kidBalanceDetails.available_balance >= amount;
+  } catch (error) {
+    throw new Error(`Error checking balance for withdrawal: ${error.message}`);
+  }
+};
+
+
+
 
 
 
