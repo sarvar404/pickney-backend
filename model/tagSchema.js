@@ -6,8 +6,11 @@ const tagSchema = new mongoose.Schema(
     name: {
       type: String,
     },
+    tag_type: {
+      type: String,
+    },
     photo: {
-      type: String, // Assuming it's a file path or URL
+      type: [String],
     },
   },
   { timestamps: { createdAt: "created_at" } }

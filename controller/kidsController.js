@@ -3,14 +3,9 @@ import userSchema from "../model/userSchema.js";
 import refreshTokenKidsSchema from "../model/refreshTokenKidsSchema.js";
 import { setKids } from "../service/auth.js";
 import bcrypt from "bcrypt";
-import {
-  code200,
-  code400,
-  code500,
-} from "../responseCode.js";
+import { code200, code400, code500 } from "../responseCode.js";
 import { KID, PARENT } from "../contentId.js";
 import { trimVal } from "../validation/trim.js";
-
 
 export const getSingleKid = async (request, response) => {
   const _id = request.params.id;
@@ -54,7 +49,9 @@ export const getAllKidList = async (request, response) => {
       data: details,
     });
   } catch (err) {
-    response.status(404).json({ errorCode: code400, success: false, error: "Not found" });
+    response
+      .status(404)
+      .json({ errorCode: code400, success: false, error: "Not found" });
   }
 };
 
@@ -110,12 +107,11 @@ const addKidToUser = async (loginData, password, uniqueId, kidFK) => {
   }
 };
 
-
-export const updateKidToUser = async (loginData, password,kidFK) => {
+export const updateKidToUser = async (loginData, password, kidFK) => {
   try {
-// console.log(kidFK);
-// process.exit();
-    
+    // console.log(kidFK);
+    // process.exit();
+
     const update = {
       name: loginData.name,
       email: loginData.email,
@@ -133,17 +129,18 @@ export const updateKidToUser = async (loginData, password,kidFK) => {
     };
 
     const savedUser = await userSchema.findOneAndUpdate(
-      { 
-        kidFK : kidFK
-      }, 
-      update, options);
+      {
+        kidFK: kidFK,
+      },
+      update,
+      options
+    );
 
     return savedUser;
   } catch (error) {
     throw new Error(`Failed to update/add kid to user: ${error.message}`);
   }
 };
-
 
 export const kidRegister = async (request, response) => {
   try {
@@ -275,10 +272,7 @@ export const kidUpdate = async (request, response) => {
     let upComingPassword = undefined;
     if (request.body.password) {
       const saltRounds = 10;
-      const passwordHash = await bcrypt.hash(
-        request.body.password,
-        saltRounds
-      );
+      const passwordHash = await bcrypt.hash(request.body.password, saltRounds);
       upComingPassword = passwordHash;
     }
 
@@ -308,7 +302,6 @@ export const kidUpdate = async (request, response) => {
     });
   }
 };
-
 
 export const kidLogin = async (request, response) => {
   try {
@@ -389,6 +382,6 @@ export const refreshToken = async (request, response) => {
       token: newAccessToken,
     });
   } catch (error) {
-    response.status(400).json({ errorCode : code400, error: error.message });
+    response.status(400).json({ errorCode: code400, error: error.message });
   }
 };

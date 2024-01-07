@@ -650,6 +650,48 @@ const KIDLOGIN = async (uniqueId, password, response) => {
   });
 };
 
+const UNIVERSELLOGIN = async (email, password, response) => {
+  const user = await userSchema.findOne({
+    email: { $regex: new RegExp(`^${email}$`, "i") },
+  });
+
+  if (!user) {
+    throw new Error("Invalid email or password");
+  }
+
+  const passwordMatch = await bcrypt.compare(password, user.password);
+
+  if (!passwordMatch) {
+    throw new Error("Invalid email or password");
+  }
+
+  let refreshTokenDocument = await refreshTokenSchema.findOne({
+    userId: user._id,
+  });
+
+  if (!refreshTokenDocument) {
+    const token = setUser(user);
+    refreshTokenDocument = new refreshTokenSchema({
+      userId: user._id,
+      refreshToken: token,
+      token: token,
+      role: user.role,
+    });
+    await refreshTokenDocument.save();
+  }
+
+  response.cookie("token", refreshTokenDocument.token);
+  response.cookie("refreshToken", refreshTokenDocument.refreshToken);
+  response.status(200).json({
+    success: true,
+    message: "You have successfully logged in",
+    token: refreshTokenDocument.token,
+    refreshToken: refreshTokenDocument.refreshToken,
+    role: user.role,
+    id: user._id,
+  });
+};
+
 export const login = async (request, response) => {
   try {
     const { id, password } = request.body;
@@ -657,8 +699,9 @@ export const login = async (request, response) => {
     const isEmail = emailRegex.test(id);
 
     if (isEmail) {
-      await PARENTLOGIN(id, password, response);
+      await UNIVERSELLOGIN(id, password, response);
     } else {
+      // throw new Error("Invalid email address");
       await KIDLOGIN(id, password, response);
     }
   } catch (error) {

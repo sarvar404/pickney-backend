@@ -1,12 +1,11 @@
 import tagSchema from "../model/tagSchema.js";
-import { code400 } from "../responseCode.js";
+import { code200, code400 } from "../responseCode.js";
 
 export const addTag = async (request, response) => {
-  // console.log(request.body);
-  // process.exit();
   try {
     const tagData = {
       name: request.body.name,
+      tag_type: request.body.tag_type,
       photo: request.body.photo,
     };
 
@@ -18,7 +17,9 @@ export const addTag = async (request, response) => {
       id: savedTag.id,
     });
   } catch (error) {
-    response.status(400).json({ errorCode : code400, success: false, error: error.message });
+    response
+      .status(400)
+      .json({ errorCode: code400, success: false, error: error.message });
   }
 };
 
@@ -28,6 +29,7 @@ export const updateTag = async (request, response) => {
 
     const updatedTagData = {
       name: request.body.name,
+      tag_type: request.body.tag_type,
       photo: request.body.photo,
     };
 
@@ -50,7 +52,9 @@ export const updateTag = async (request, response) => {
       updatedTag,
     });
   } catch (error) {
-    response.status(400).json({ errorCode : code400, success: false, error: error.message });
+    response
+      .status(400)
+      .json({ errorCode: code400, success: false, error: error.message });
   }
 };
 
@@ -72,6 +76,57 @@ export const deleteTag = async (request, response) => {
       message: "Tag deleted successfully",
     });
   } catch (error) {
-    response.status(400).json({ errorCode : code400, success: false, error: error.message });
+    response
+      .status(400)
+      .json({ errorCode: code400, success: false, error: error.message });
+  }
+};
+
+export const getSingleTag = async (request, response) => {
+  try {
+    const _id = request.body._id;
+    const tag_type = request.body.tag_type;
+
+    // Find the tag details using both _id and tag_type
+    const tagDetails = await tagSchema.findOne({ _id, tag_type });
+
+    if (!tagDetails) {
+      return response.status(404).json({
+        errorCode: code400,
+        success: false,
+        error: "Tag not found",
+      });
+    }
+
+    response.status(200).json({
+      code: code200,
+      success: true,
+      message: "Successful",
+      tag: tagDetails,
+    });
+  } catch (error) {
+    response.status(500).json({
+      errorCode: code400,
+      success: false,
+      error: error.message,
+    });
+  }
+};
+
+export const getAlltags = async (request, response) => {
+  try {
+    const details = await tagSchema.find();
+    const totalRecords = details.length;
+    response.status(200).json({
+      code: code200,
+      success: true,
+      message: "Successful",
+      totalRecords: totalRecords,
+      data: details,
+    });
+  } catch (err) {
+    response
+      .status(404)
+      .json({ errorCode: code400, success: false, error: "Not found" });
   }
 };
