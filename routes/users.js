@@ -1,6 +1,6 @@
 import express from "express";
 import dotenv from "dotenv";
-import { OTPVerification, OTPVerificationAndSignIn, accessTrue, deleteUser, forgotAndGetOTP, getAllProfiles, getProfile, login, reSetPassword, refreshToken, registration, registrationVerify, updateUserProfile } from "../controller/usersController.js";
+import { OTPVerification, OTPVerificationAndSignIn, accessTrue, deleteUser, forgotAndGetOTP, getAllProfiles, getKidsDetailForUser, getProfile, login, reSetPassword, refreshToken, registration, registrationVerify, updateUserProfile } from "../controller/usersController.js";
 import { authSecurityHeader, verifyAccessToken } from "../middlewares/middlewareAuth.js";
 
 dotenv.config();
@@ -21,6 +21,7 @@ router.post("/user/reset-password", authSecurityHeader, reSetPassword);
 router.get("/user/get-user/:id", authSecurityHeader, getProfile);
 router.get("/user/get-all-user", authSecurityHeader, getAllProfiles);
 router.put("/user/update", authSecurityHeader, updateUserProfile);
+router.get("/user/kids-details", authSecurityHeader, getKidsDetailForUser);
 
 
 export default router;
