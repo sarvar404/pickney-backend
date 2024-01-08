@@ -394,11 +394,7 @@ export const registration = expressAsyncHandler(async (request, response) => {
 
           return response
             .status(500)
-            .json({
-              success: false,
-              errorCode: code400,
-              error: "Failed to send OTP email",
-            });
+            .json({ success: false, errorCode : code400, error: "Failed to send OTP email" });
         } else {
           // console.log('Email sent successfully!');
           setTimeout(async () => {
@@ -424,7 +420,7 @@ export const registration = expressAsyncHandler(async (request, response) => {
 
       if (verifiedUser) {
         return response.status(400).json({
-          errorCode: code400,
+          errorCode : code400,
           success: false,
           error: "User with the same email is already verified",
         });
@@ -479,11 +475,7 @@ export const registration = expressAsyncHandler(async (request, response) => {
 
           return response
             .status(500)
-            .json({
-              success: false,
-              errorCode: code400,
-              error: "Failed to send OTP email",
-            });
+            .json({ success: false,errorCode : code400, error: "Failed to send OTP email" });
         } else {
           // console.log('Email sent successfully!');
           setTimeout(async () => {
@@ -505,11 +497,7 @@ export const registration = expressAsyncHandler(async (request, response) => {
     console.error(err);
     return response
       .status(500)
-      .json({
-        success: false,
-        errorCode: code400,
-        error: "Internal server error",
-      });
+      .json({ success: false,errorCode : code400, error: "Internal server error" });
   }
 });
 
@@ -718,7 +706,7 @@ export const login = async (request, response) => {
     }
   } catch (error) {
     console.error("Login error:", error);
-    response.status(400).json({ errorCode: code400, error: error.message });
+    response.status(400).json({ errorCode : code400, error: error.message });
   }
 };
 
@@ -740,7 +728,7 @@ export const refreshToken = async (request, response) => {
       token: newAccessToken,
     });
   } catch (error) {
-    response.status(400).json({ errorCode: code400, error: error.message });
+    response.status(400).json({ errorCode : code400, error: error.message });
   }
 };
 export const accessTrue = async (request, response) => {
@@ -750,7 +738,8 @@ export const accessTrue = async (request, response) => {
       message: "You have access",
     });
   } catch (error) {
-    response.status(400).json({ errorCode: code400, error: error.message });
+    
+    response.status(400).json({ errorCode : code400, error: error.message });
   }
 };
 
@@ -772,9 +761,7 @@ export const deleteUser = async (request, response) => {
       message: "User deleted successfully",
     });
   } catch (error) {
-    response
-      .status(400)
-      .json({ success: false, errorCode: code400, error: error.message });
+    response.status(400).json({ success: false, errorCode : code400, error: error.message });
   }
 };
 
@@ -782,7 +769,7 @@ export const deleteUser = async (request, response) => {
 
 export const getParentKids = async (userId) => {
   try {
-    const details = await kidSchema.find({ userId }).select("name");
+    const details = await kidSchema.find({ userId }).select('name');
     return details;
   } catch (error) {
     // Throw an error to be caught and handled by the calling function
@@ -820,13 +807,15 @@ export const getProfile = async (request, response) => {
           },
           {
             event_name: "Event 2",
-
+            stars: 15,
+            stars_value: 75,
             event_type: true,
             end_at: "2024-01-09T14:00:00Z",
           },
           {
             event_name: "Event 3",
-
+            stars: 20,
+            stars_value: 100,
             event_type: true,
             end_at: "2024-01-10T18:00:00Z",
           },
@@ -839,19 +828,22 @@ export const getProfile = async (request, response) => {
         events: [
           {
             event_name: "Event 1",
-
+            stars: 10,
+            stars_value: 50,
             event_type: true,
             end_at: "2024-01-08T12:00:00Z",
           },
           {
             event_name: "Event 2",
-
+            stars: 15,
+            stars_value: 75,
             event_type: true,
             end_at: "2024-01-09T14:00:00Z",
           },
           {
             event_name: "Event 3",
-
+            stars: 20,
+            stars_value: 100,
             event_type: true,
             end_at: "2024-01-10T18:00:00Z",
           },
@@ -864,19 +856,22 @@ export const getProfile = async (request, response) => {
         events: [
           {
             event_name: "Event 1",
-
+            stars: 10,
+            stars_value: 50,
             event_type: true,
             end_at: "2024-01-08T12:00:00Z",
           },
           {
             event_name: "Event 2",
-
+            stars: 15,
+            stars_value: 75,
             event_type: true,
             end_at: "2024-01-09T14:00:00Z",
           },
           {
             event_name: "Event 3",
-
+            stars: 20,
+            stars_value: 100,
             event_type: true,
             end_at: "2024-01-10T18:00:00Z",
           },
@@ -897,8 +892,7 @@ export const getProfile = async (request, response) => {
     response.status(500).json({
       success: false,
       error: "Internal server error",
-      errorCode: code400,
-      error: error.message,
+      errorCode : code400, error: error.message,
     });
   }
 };
@@ -917,20 +911,19 @@ export const getAllProfiles = async (request, response) => {
       data: details,
     });
   } catch (err) {
-    response
-      .status(404)
-      .json({ errorCode: code400, success: false, error: "Not found" });
+    response.status(404).json({ errorCode: code400, success: false, error: "Not found" });
   }
 };
 
 export const updateUserProfile = async (request, response) => {
   try {
+
     const { _id, email, name, guardian, phone, photo, address } = request.body;
     // const password = request.body.password; // Assuming you have a way to get the password
     // const passwordHash = await bcrypt.hash(password, 10);
 
     // Check if the provided email with role 'P' exists
-    const existingUserP = await userSchema.findOne({ email, role: "P" });
+    const existingUserP = await userSchema.findOne({ email, role: 'P' });
 
     if (existingUserP) {
       // Email with role 'P' exists, update the record
@@ -941,7 +934,7 @@ export const updateUserProfile = async (request, response) => {
         phone,
         // password: passwordHash,
         photo,
-        role: PARENT,
+        role : PARENT,
         address,
       };
       const updatedUser = await userSchema.findOneAndUpdate(
@@ -967,7 +960,7 @@ export const updateUserProfile = async (request, response) => {
     } else {
       // Email with role 'P' does not exist, look for an unverified user with the provided email
       let existingUserUnverified = await userSchema.findOne({
-        email,
+        email
       });
 
       if (!existingUserUnverified) {
@@ -979,7 +972,7 @@ export const updateUserProfile = async (request, response) => {
           phone,
           // password: passwordHash,
           photo,
-          role: PARENT,
+          role : PARENT,
           address,
           verified: false,
         };
@@ -1006,7 +999,7 @@ export const updateUserProfile = async (request, response) => {
       } else {
         // No existing user found, return an error response
         return response.status(400).json({
-          errorCode: code400,
+          errorCode : code400,
           success: false,
           error: "User with the same email is already verified",
         });
@@ -1123,8 +1116,11 @@ export const getKidsDetailForUser = async (request, response) => {
       data: details,
     });
   } catch (err) {
-    response
-      .status(404)
-      .json({ errorCode: code400, success: false, error: "Not found" });
+    response.status(404).json({ errorCode: code400, success: false, error: "Not found" });
   }
 };
+
+
+
+
+
