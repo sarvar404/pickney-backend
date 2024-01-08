@@ -1,7 +1,7 @@
 import express from "express";
 import dotenv from "dotenv";
 
-import { addLoan, deleteLoan, getAllLoan, getLoan, updateLoan } from "../controller/loanController.js";
+import { addLoan, deleteLoan, getAllLoan, getLoan, loanCalculation, updateLoan } from "../controller/loanController.js";
 import { authSecurityHeader } from "../middlewares/middlewareAuth.js";
 import { getAllPassbookEntries, getCommonAcoountPassBookEntries, getSinglePassbookEntry } from "../controller/passbookController.js";
 
@@ -21,5 +21,9 @@ router.get("/passbook/get-single-passbook-entry/:id", authSecurityHeader,  getSi
 router.get("/passbook/get-all-passbook-entry", authSecurityHeader,  getAllPassbookEntries);
 router.get("/passbook/get-all-common-ac-passbook-entry/:id", authSecurityHeader,  getCommonAcoountPassBookEntries);
 
+
+// get loanCalculation
+
+router.get("/loan/loan-calculation", authSecurityHeader,  loanCalculation);
 
 export default router;

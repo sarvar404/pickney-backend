@@ -1,7 +1,7 @@
 import loanSchema from "../model/loanSchema.js";
 import loanLogsSchema from "../model/loanLogsSchema.js";
 import { code200, code400 } from "../responseCode.js";
-import { is_pending } from "../contentId.js";
+import { interest_rate, is_active, is_pending } from "../contentId.js";
 import {
   calculateDynamicEmiDates,
   calculateEmiDates,
@@ -133,6 +133,55 @@ export const deleteLoan = async (request, response) => {
   }
 };
 
+export const loanCalculation = async (request, response) => {
+  try {
+    const { amount, duration } = request.body;
+
+    // Check if amount or duration is empty
+    if (!amount || !duration) {
+      const missingFields = [];
+      if (!amount) missingFields.push("amount");
+      if (!duration) missingFields.push("duration");
+
+      const errorMessage = `The following field(s) are required: ${missingFields.join(', ')}`;
+
+      return response.status(400).json({
+        errorCode: code400,
+        success: false,
+        error: errorMessage,
+      });
+    }
+
+    // Define interest rate
+    const interestRate = 0.05; // Set your interest rate here
+
+    // Calculate principal, interest, and total
+    const principal = amount * duration;
+    const interest = principal * interestRate;
+    const total = principal + interest;
+    const totalLoanAmount = amount + interest;
+    const emi = (total / duration).toFixed(4);
+
+    response.status(200).json({
+      code: code200,
+      success: true,
+      message: "Calculation successful",
+      result: {
+        emi: Number(emi), // Convert emi to a number
+        principal,
+        interest,
+        total,
+      },
+    });
+  } catch (error) {
+    response.status(400).json({
+      errorCode: code400,
+      success: false,
+      error: error.message,
+    });
+  }
+};
+
 
 
 // cron job .....
@@ -178,20 +227,22 @@ export const addLoanLog = async (data, emi) => {
 
 export const addLoan = async (request, response) => {
   try {
-    const { interest, duration, amount } = request.body;
+    const { interest, duration, amount, emi } = request.body;
     // const totalLoanAmount = amount + interest * duration;
     // const emi = totalLoanAmount / duration;
 
-    const totalLoanAmount = amount + interest;
-    const emi = (totalLoanAmount / duration).toFixed(4);
+    // const totalLoanAmount = amount + interest;
+    // const emi = (totalLoanAmount / duration).toFixed(4);
 
     const loanData = {
       userId: request.body.userId,
       kidId: request.body.kidId,
-      interest: request.body.interest,
-      duration: request.body.duration,
       amount: request.body.amount,
-      status: request.body.status,
+      interest: request.body.interest,
+      principal: request.body.principal,
+      total: request.body.total,
+      duration: request.body.duration,
+      status: is_active,
       remarks: request.body.remarks,
     };
 

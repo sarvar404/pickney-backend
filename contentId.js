@@ -27,3 +27,7 @@ export const is_pending = "PENDING";
 // jobs upto days for daily jobs
 
 export const is_daily_date = 3;
+
+// interest rate
+
+export const interest_rate = 0.5; // 5%

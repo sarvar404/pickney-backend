@@ -17,7 +17,15 @@ const loanSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
+    principal: {
+      type: Number,
+      required: true,
+    },
     interest: {
+      type: Number,
+      required: true,
+    },
+    total: {
       type: Number,
       required: true,
     },

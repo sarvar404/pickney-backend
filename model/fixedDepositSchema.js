@@ -25,6 +25,10 @@ const fixedDepositSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
+    total: {
+      type: Number,
+      required: true,
+    },
     duration: {
       type: Number,
       required: true,
