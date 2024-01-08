@@ -799,6 +799,7 @@ export const getProfile = async (request, response) => {
         kid_user_id: "123",
         total_stars: 10,
         total_stars_value: 50,
+        photo: "https://pickney01storage.blob.core.windows.net/common-img-storage-psr01/1704701999085_Tom-Holland.jpg",
         events: [
           {
             event_name: "Event 1",
@@ -829,6 +830,7 @@ export const getProfile = async (request, response) => {
         kid_user_id: "123",
         total_stars: 10,
         total_stars_value: 50,
+        photo: "https://pickney01storage.blob.core.windows.net/common-img-storage-psr01/1704701999085_Tom-Holland.jpg",
         events: [
           {
             event_name: "Event 1",
@@ -859,6 +861,7 @@ export const getProfile = async (request, response) => {
         kid_user_id: "123",
         total_stars: 10,
         total_stars_value: 50,
+        photo: "https://pickney01storage.blob.core.windows.net/common-img-storage-psr01/1704701999085_Tom-Holland.jpg",
         events: [
           {
             event_name: "Event 1",
