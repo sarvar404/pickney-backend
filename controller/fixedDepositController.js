@@ -40,7 +40,17 @@ export const getFixedDeposit = async (request, response) => {
 
 export const getAllFixedDeposit = async (request, response) => {
   try {
-    const details = await fixedDepositSchema.find();
+
+    const userId = request.body.userId;
+
+    if (!userId) {
+      return response.status(400).json({
+        errorCode: code400,
+        success: false,
+        error: "UserId is required.",
+      });
+    }
+    const details = await fixedDepositSchema.find({ userId });
     const totalRecords = details.length;
     response.status(200).json({
       code: code200,
