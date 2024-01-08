@@ -13,15 +13,29 @@ export const addTag = async (request, response) => {
 
     response.status(200).json({
       success: true,
-      message: "tag created successfully",
+      message: "Tag created successfully",
       id: savedTag.id,
     });
   } catch (error) {
-    response
-      .status(400)
-      .json({ errorCode: code400, success: false, error: error.message });
+    let errorMessage = "Error creating tag.";
+
+    if (error.errors) {
+      const errorKeys = Object.keys(error.errors);
+
+      // Check for specific field validation errors
+      if (errorKeys.length > 0) {
+        errorMessage = error.errors[errorKeys[0]].message;
+      }
+    }
+
+    response.status(400).json({
+      errorCode: code400,
+      success: false,
+      error: errorMessage,
+    });
   }
 };
+
 
 export const updateTag = async (request, response) => {
   try {
