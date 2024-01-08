@@ -790,7 +790,95 @@ export const getProfile = async (request, response) => {
       });
     }
 
-    const parentKids = await getParentKids(userDetails._id);
+    // const parentKids = await getParentKids(userDetails._id);
+
+    const parentKids = [
+      {
+        kidname: "John",
+        email: "john@example.com",
+        kid_user_id: "123",
+        events: [
+          {
+            event_name: "Event 1",
+            total_stars: 10,
+            total_stars_value: 50,
+            event_type: true,
+            end_at: "2024-01-08T12:00:00Z",
+          },
+          {
+            event_name: "Event 2",
+            total_stars: 15,
+            total_stars_value: 75,
+            event_type: true,
+            end_at: "2024-01-09T14:00:00Z",
+          },
+          {
+            event_name: "Event 3",
+            total_stars: 20,
+            total_stars_value: 100,
+            event_type: true,
+            end_at: "2024-01-10T18:00:00Z",
+          },
+        ],
+      },
+      {
+        kidname: "William",
+        email: "william@example.com",
+        kid_user_id: "123",
+        events: [
+          {
+            event_name: "Event 1",
+            total_stars: 10,
+            total_stars_value: 50,
+            event_type: true,
+            end_at: "2024-01-08T12:00:00Z",
+          },
+          {
+            event_name: "Event 2",
+            total_stars: 15,
+            total_stars_value: 75,
+            event_type: true,
+            end_at: "2024-01-09T14:00:00Z",
+          },
+          {
+            event_name: "Event 3",
+            total_stars: 20,
+            total_stars_value: 100,
+            event_type: true,
+            end_at: "2024-01-10T18:00:00Z",
+          },
+        ],
+      },
+      {
+        kidname: "Samson",
+        email: "samson@example.com",
+        kid_user_id: "123",
+        events: [
+          {
+            event_name: "Event 1",
+            total_stars: 10,
+            total_stars_value: 50,
+            event_type: true,
+            end_at: "2024-01-08T12:00:00Z",
+          },
+          {
+            event_name: "Event 2",
+            total_stars: 15,
+            total_stars_value: 75,
+            event_type: true,
+            end_at: "2024-01-09T14:00:00Z",
+          },
+          {
+            event_name: "Event 3",
+            total_stars: 20,
+            total_stars_value: 100,
+            event_type: true,
+            end_at: "2024-01-10T18:00:00Z",
+          },
+        ],
+      },
+      // Add more kid data as needed
+    ];
 
     response.status(200).json({
       success: true,
@@ -941,21 +1029,21 @@ export const getKidsDetailForUser = async (request, response) => {
             event_name: "Event 1",
             total_stars: 10,
             total_stars_value: 50,
-            event_type: "Type 1",
+            event_type: true,
             end_at: "2024-01-08T12:00:00Z",
           },
           {
             event_name: "Event 2",
             total_stars: 15,
             total_stars_value: 75,
-            event_type: "Type 2",
+            event_type: true,
             end_at: "2024-01-09T14:00:00Z",
           },
           {
             event_name: "Event 3",
             total_stars: 20,
             total_stars_value: 100,
-            event_type: "Type 3",
+            event_type: true,
             end_at: "2024-01-10T18:00:00Z",
           },
         ],
@@ -969,21 +1057,21 @@ export const getKidsDetailForUser = async (request, response) => {
             event_name: "Event 1",
             total_stars: 10,
             total_stars_value: 50,
-            event_type: "Type 1",
+            event_type: true,
             end_at: "2024-01-08T12:00:00Z",
           },
           {
             event_name: "Event 2",
             total_stars: 15,
             total_stars_value: 75,
-            event_type: "Type 2",
+            event_type: true,
             end_at: "2024-01-09T14:00:00Z",
           },
           {
             event_name: "Event 3",
             total_stars: 20,
             total_stars_value: 100,
-            event_type: "Type 3",
+            event_type: true,
             end_at: "2024-01-10T18:00:00Z",
           },
         ],
@@ -997,21 +1085,21 @@ export const getKidsDetailForUser = async (request, response) => {
             event_name: "Event 1",
             total_stars: 10,
             total_stars_value: 50,
-            event_type: "Type 1",
+            event_type: true,
             end_at: "2024-01-08T12:00:00Z",
           },
           {
             event_name: "Event 2",
             total_stars: 15,
             total_stars_value: 75,
-            event_type: "Type 2",
+            event_type: true,
             end_at: "2024-01-09T14:00:00Z",
           },
           {
             event_name: "Event 3",
             total_stars: 20,
             total_stars_value: 100,
-            event_type: "Type 3",
+            event_type: true,
             end_at: "2024-01-10T18:00:00Z",
           },
         ],
