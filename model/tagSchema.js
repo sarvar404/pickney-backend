@@ -1,8 +1,13 @@
 import mongoose from "mongoose";
-import { tagsTb } from "../tbEnums.js";
+import { tagsTb, userTb } from "../tbEnums.js";
 
 const tagSchema = new mongoose.Schema(
   {
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: userTb, // Reference to the user schema
+      required: true,
+    },
     name: {
       type: String,
       required: true,

@@ -3,7 +3,18 @@ import { code200, code400 } from "../responseCode.js";
 
 export const addTag = async (request, response) => {
   try {
+    const userId = request.params.userId || request.body.userId;
+
+    if (!userId) {
+      return response.status(400).json({
+        errorCode: code400,
+        success: false,
+        error: "UserId is required.",
+      });
+    }
+
     const tagData = {
+      userId: userId,
       name: request.body.name,
       tag_type: request.body.tag_type,
       photo: request.body.photo,
@@ -35,6 +46,7 @@ export const addTag = async (request, response) => {
     });
   }
 };
+
 
 
 export const updateTag = async (request, response) => {
@@ -102,6 +114,7 @@ export const getSingleTag = async (request, response) => {
     const tag_type = request.body.tag_type;
 
     // Find the tag details using both _id and tag_type
+    // const tagDetails = await tagSchema.findOne({ _id, tag_type });
     const tagDetails = await tagSchema.findOne({ _id, tag_type });
 
     if (!tagDetails) {
@@ -129,8 +142,22 @@ export const getSingleTag = async (request, response) => {
 
 export const getAlltags = async (request, response) => {
   try {
-    const details = await tagSchema.find();
+    const userId = request.body.userId; // Assuming userId is part of the route parameters
+
+    // Check if userId is provided
+    if (!userId) {
+      return response.status(400).json({
+        errorCode: code400,
+        success: false,
+        error: "UserId is required.",
+      });
+    }
+
+    // Fetch tags that match the provided userId
+    const details = await tagSchema.find({ userId });
+
     const totalRecords = details.length;
+
     response.status(200).json({
       code: code200,
       success: true,
@@ -139,8 +166,11 @@ export const getAlltags = async (request, response) => {
       data: details,
     });
   } catch (err) {
-    response
-      .status(404)
-      .json({ errorCode: code400, success: false, error: "Not found" });
+    response.status(404).json({
+      errorCode: code400,
+      success: false,
+      error: "Not found",
+    });
   }
 };
+
