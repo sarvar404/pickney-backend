@@ -1,5 +1,6 @@
 import moment from "moment";
 import eventSchema from "./model/eventSchema.js";
+import activitySchema from "./model/activitySchema.js";
 import kidBalanceSchema from "./model/kidBalanceSchema.js";
 import { is_credit, is_debit } from "./contentId.js";
 
@@ -19,42 +20,6 @@ export const calculateEmiDates = (endDate, duration) => {
 
   return emiDates;
 };
-
-// export const calculateDynamicEmiDates = (endDate, duration) => {
-//   const emiDates = [];
-//   const endDateMoment = moment(endDate, "DD/MM/YYYY");
-//   const currentMonth = moment().month() + 1; // Get the current date
-
-//   // console.log(endDate)
-//   // console.log(endDateMoment.month() + 1)
-//   // console.log(currentMonth.month() + 1);
-//   // console.log(currentMonth.date() + 1);
-//   // console.log(currentMonth.year() + 1);
-
-//   const monthsToAdd = Math.floor((endDateMoment.month() + 1) / duration);
-
-//   console.log(monthsToAdd);
-
-//   return emiDates;
-// };
-
-// export const calculateDynamicEmiDates = (endDate, duration) => {
-//   const endDateMoment = moment(endDate, "DD/MM/YYYY");
-//   const currentMonth = moment().month() + 1; // Get the current month (1-indexed)
-
-//   // Convert December to 1, January to 12, February to 11, and so on
-//   const adjustedMonth = currentMonth === 12 ? 1 : 13 - currentMonth;
-
-//   // Continue with your code using the adjustedMonth
-//   // ...
-
-//   console.log("Adjusted Month:", adjustedMonth);
-//   const monthsToAdd = Math.floor((endDateMoment.month() + 1) / duration);
-//   console.log(monthsToAdd);
-// };
-
-// // Example usage
-// calculateDynamicEmiDates("2023-12-31", 12);
 
 
 export const calculateDynamicEmiDates = (duration) => {
@@ -176,6 +141,101 @@ export const balanceCanWithdraw = async (userId, kidId, amount) => {
     throw new Error(`Error checking balance for withdrawal: ${error.message}`);
   }
 };
+
+
+export const updateEventStatus = async (eventId) => {
+  try {
+    // Find the event by _id and update its status to 2
+    const updatedEvent = await eventSchema.findOneAndUpdate(
+      { _id: eventId },
+      { status: 2 },
+      { new: true }
+    );
+
+    if (!updatedEvent) {
+      // If no event is found with the given _id, throw an error
+      throw new Error('Event not found');
+    }
+
+    // Return the updated event
+    return updatedEvent;
+  } catch (error) {
+    // If there is an error, throw an error with a meaningful message
+    throw new Error(`Error updating event status: ${error.message}`);
+  }
+};
+
+export const updateActivity = async (_id) => {
+  try {
+    // Find the event by _id and update its status to 2
+    const updatedActivity = await activitySchema.findOneAndUpdate(
+      { _id },
+      { status: 2 },
+      { new: true }
+    );
+
+    if (!updatedActivity) {
+      // If no event is found with the given _id, throw an error
+      throw new Error('Activity not found');
+    }
+
+    // Return the updated activity
+    return updatedActivity;
+  } catch (error) {
+    // If there is an error, throw an error with a meaningful message
+    throw new Error(`Error updating activity status: ${error.message}`);
+  }
+};
+
+
+export const doesEventExistWithStatus = async (eventId) => {
+  try {
+    // Find the event by _id and status 1
+    const existingEvent = await eventSchema.findOne({ _id: eventId, status: 1 });
+
+    // Return true if the event exists with status 1, otherwise, return false
+    return !!existingEvent;
+  } catch (error) {
+    // If there is an error, return false
+    return false;
+  }
+};
+
+export const doesActivityExist = async (activityId) => {
+  try {
+    // Find the activity by _id and status 1
+    const existingActivity = await activitySchema.findOne({ _id: activityId, status: 1 });
+
+    // Return true if the activity exists with status 1, otherwise, return false
+    return !!existingActivity;
+  } catch (error) {
+    // If there is an error, return false
+    return false;
+  }
+};
+
+
+
+export const getCountedActivities = async (eventId) => {
+  try {
+    // Count the number of activities with status 1 for the given eventId
+    const totalActivities = await activitySchema.countDocuments({
+      eventId: eventId,
+      status: 1,
+    });
+
+    return totalActivities;
+  } catch (error) {
+    // If there is an error, throw an error with a meaningful message
+    throw new Error(`Error getting total activities: ${error.message}`);
+  }
+};
+
+
+
+
+
+
 
 
 

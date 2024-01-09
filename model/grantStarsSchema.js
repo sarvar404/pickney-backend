@@ -22,11 +22,11 @@ const grantStarsSchema = new mongoose.Schema(
       type: String,
     },
     event_type: {
-      type: String,
-    },
-    is_recurring: {
       type: Boolean,
       default: false, // Set a default value if needed
+    },
+    reward_type: {
+      type: String,
     },
     values: {
       type: Number,

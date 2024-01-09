@@ -1,15 +1,20 @@
 import { StarType, is_credit, is_debit } from "../contentId.js";
 import {
-  
   balanceCanWithdraw,
+  doesActivityExist,
+  doesEventExistWithStatus,
+  getCountedActivities,
   getEventStars,
   getTotalBalance,
+  updateActivity,
+  updateEventStatus,
   updateOrCreateKidBalance,
 } from "../helper_function.js";
 import eventSchema from "../model/eventSchema.js";
 import grantStarsSchema from "../model/grantStarsSchema.js";
 import passbookSchema from "../model/passbookSchema.js";
 import { code200, code400 } from "../responseCode.js";
+import { getEventActivities } from "./eventsController.js";
 
 export const updateGrantedKid = async (request, response) => {
   try {
@@ -121,7 +126,7 @@ export const updateEvent = async (data, callback) => {
   }
 };
 
-export const addPassbook = async (data, grantedData, callback) => {
+export const addPassbook = async (data, grantedData,activityId, callback) => {
   try {
     const getAvailableBalance = await getTotalBalance(data.userId, data.kidId);
 
@@ -132,32 +137,77 @@ export const addPassbook = async (data, grantedData, callback) => {
       status: `STAR GRANTED FOR ${grantedData.event_name}`,
       remarks: grantedData.remarks,
       balance_stars: grantedData.values,
-      available_balance: getAvailableBalance ? getAvailableBalance.available_balance : 0,
+      available_balance: getAvailableBalance
+        ? getAvailableBalance.available_balance
+        : 0,
       photo: "http://dummy.jpg",
-      is_credit: grantedData.event_type, // Assuming is_credit is defined somewhere
+      is_credit: grantedData.reward_type, // Assuming is_credit is defined somewhere
     };
 
     const savedPassbook = await passbookSchema.create(passbookData);
 
+    if (savedPassbook) {
+      // It will check all the activities done or not.
+      // if not then wont update status 2 for event.
+
+      const total = await getCountedActivities(grantedData.eventId);
+
+      // console.log(total);
+      if (total <= 1) {
+        await updateActivity(activityId);
+        await updateEventStatus(grantedData.eventId);
+      } else {
+        await updateActivity(activityId);
+      }
+    }
+
     const response = {
       success: true,
-      message: "Passbook created successfully",
-      id: savedPassbook.id,
+      message: "granted process done successfully",
     };
 
     callback(response);
   } catch (error) {
-    const response = { errorCode: code400, success: false, error: error.message };
+    const response = {
+      errorCode: code400,
+      success: false,
+      error: error.message,
+    };
     callback(response);
   }
 };
 
 export const grantStar = async (request, response) => {
   try {
-    const { event_type, createdBy, kidId, eventId, values } = request.body;
+    const { event_type, reward_type, createdBy, kidId, eventId, values, activityId } =
+      request.body;
 
-    if (event_type === is_debit) {
-      const amountIsSufficient = await balanceCanWithdraw(createdBy, kidId, values);
+    const eventExistsWithStatus = await doesEventExistWithStatus(eventId);
+
+    if (!eventExistsWithStatus) {
+      return response.status(400).json({
+        errorCode: code400,
+        success: false,
+        error: "Event not found or does not have status 1",
+      });
+    }
+
+    const activityExistorNot = await doesActivityExist(activityId);
+
+    if (!activityExistorNot) {
+      return response.status(400).json({
+        errorCode: code400,
+        success: false,
+        error: "Activity not found or does not have status 1",
+      });
+    }
+
+    if (reward_type === is_debit) {
+      const amountIsSufficient = await balanceCanWithdraw(
+        createdBy,
+        kidId,
+        values
+      );
       if (!amountIsSufficient) {
         return response.status(400).json({
           errorCode: code400,
@@ -173,7 +223,7 @@ export const grantStar = async (request, response) => {
       eventId,
       event_name: request.body.event_name,
       event_type,
-      is_recurring: request.body.is_recurring,
+      reward_type: reward_type,
       values,
       remarks: request.body.remarks,
     };
@@ -181,14 +231,21 @@ export const grantStar = async (request, response) => {
     const starGranted = await grantStarsSchema.create(starGrantedData);
 
     if (starGranted) {
-      const isTotalDone = await updateOrCreateKidBalance(starGranted.createdBy, starGranted.kidId, starGranted.values, starGranted.event_type);
+      const isTotalDone = await updateOrCreateKidBalance(
+        starGranted.createdBy,
+        starGranted.kidId,
+        starGranted.values,
+        starGranted.reward_type
+      );
       if (isTotalDone) {
-        await addPassbook(isTotalDone, starGranted, (passbookResponse) => {
+        await addPassbook(isTotalDone, starGranted,activityId, (passbookResponse) => {
           response.status(200).json(passbookResponse);
         });
       }
     }
   } catch (error) {
-    response.status(400).json({ errorCode: code400, success: false, error: error.message });
+    response
+      .status(400)
+      .json({ errorCode: code400, success: false, error: error.message });
   }
 };

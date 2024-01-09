@@ -494,8 +494,8 @@ export const deleteEventDefault = async (request, response) => {
 export const getOnetimeEvents = async (request, response) => {
   const { userId, kidId, created_at, is_auto_complete_event, status } = request.body;
 
-  // Validate required fields
-  if (!userId || !kidId || !created_at || is_auto_complete_event === undefined) {
+  // Validate required fields || is_auto_complete_event === undefined
+  if (!userId || !kidId || !created_at) {
     return response.status(400).json({
       errorCode: code400,
       success: false,
@@ -510,7 +510,7 @@ export const getOnetimeEvents = async (request, response) => {
       kidId,
       event_type: false,
       created_at: { $lte: moment(created_at, 'DD/MM/YYYY').endOf('day').toDate() },
-      is_auto_complete_event,
+      is_auto_complete_event : false,
       status : 1,
     });
 
@@ -525,7 +525,8 @@ export const getOnetimeEvents = async (request, response) => {
     // Fetch tag details for each event based on tag ids
     const eventsWithTags = await Promise.all(eventDetails.map(async (event) => {
       const tagDetails = await getTagDetailsByIds(event.tags);
-      return { ...event._doc, tags: tagDetails };
+      const activities = await getEventActivities(event._id);
+      return { ...event._doc, tags: tagDetails,activities };
     }));
 
     response.status(200).json({
@@ -550,6 +551,7 @@ export const getEventActivities = async (eventId) => {
       {
         $match: {
           eventId: eventId,
+          status: 1,
         },
       },
       {
@@ -591,7 +593,7 @@ export const getRecurringEvents = async (request, response) => {
   const { userId, kidId, created_at, is_auto_complete_event, status } = request.body;
 
   // Validate required fields
-  if (!userId || !kidId || !created_at || is_auto_complete_event === undefined) {
+  if (!userId || !kidId || !created_at ) {
     return response.status(400).json({
       errorCode: code400,
       success: false,
@@ -606,7 +608,7 @@ export const getRecurringEvents = async (request, response) => {
       kidId,
       event_type: true,
       created_at: { $lte: moment(created_at, 'DD/MM/YYYY').endOf('day').toDate() },
-      is_auto_complete_event,
+      is_auto_complete_event : false,
       status: 1,
     });
 
