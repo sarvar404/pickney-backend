@@ -24,6 +24,10 @@ export const is_InActive = "INACTIVE";
 export const is_paid = "PAID";
 export const is_pending = "PENDING";
 
+// event recurring
+export const is_recurring_true = true;
+export const is_recurring_false = true;
+
 // jobs upto days for daily jobs
 
 export const is_daily_date = 3;

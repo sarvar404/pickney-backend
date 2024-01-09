@@ -23,18 +23,13 @@ const eventSchema = new mongoose.Schema(
     },
     
     event_type: {
-      type: String,
-      enum: ["D", "M", "W", "A"],
+      type: Boolean,
+      default: true,
       required: true,
     },
     reward_type: {
       type: String,
-      enum: ["C", "D"],
-      required: true,
-    },
-    is_recurring: {
-      type: Boolean,
-      default: true,
+      enum: ["CR", "DR"],
       required: true,
     },
     tags: [{

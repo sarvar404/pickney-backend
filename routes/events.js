@@ -1,6 +1,6 @@
 import express from "express";
 import dotenv from "dotenv";
-import { addEvent, addEventDefault, deleteEvent, deleteEventDefault, getActivitiesByDate, getAllEventList, getSingleEvent, updateEvent, updateEventDefault } from "../controller/eventsController.js";
+import { addEvent, addEventDefault, deleteEvent, deleteEventDefault, getActivitiesByDate, getAllEventList, getOnetimeEvents, getRecurringEvents, getSingleEvent, updateEvent, updateEventDefault } from "../controller/eventsController.js";
 import { authSecurityHeader } from "../middlewares/middlewareAuth.js";
 import { deleteGrantedKid, grantStar, updateGrantedKid } from "../controller/starGrantController.js";
 
@@ -25,5 +25,8 @@ router.get("/events/get-single-events/:id", authSecurityHeader, getSingleEvent);
 router.get("/events/get-all-events", authSecurityHeader, getAllEventList);
 router.get("/events/get-events-by-date", authSecurityHeader, getActivitiesByDate);
 
+// star grant
+router.get("/events/get-onetime-events", authSecurityHeader, getOnetimeEvents);
+router.get("/events/get-recurring-events", authSecurityHeader, getRecurringEvents);
 
 export default router;

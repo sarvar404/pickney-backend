@@ -39,7 +39,7 @@ import eventSchema from "./model/eventSchema.js";
 import { fdStatus_MATURED, is_active, is_credit } from "./contentId.js";
 import { addActivityCronJob } from "./controller/eventsController.js";
 import activitySchema from "./model/activitySchema.js";
-import { updateOrCreateKidBalance } from "./helper_function.js";
+import { getEventDetails, updateOrCreateKidBalance } from "./helper_function.js";
 import { addPassbook } from "./controller/passbookController.js";
 
 const upload = multer({
@@ -404,6 +404,7 @@ cron.schedule("*/2 * * * *", async () => {
 
 // cron job for all events type
 cron.schedule("*/2 * * * *", async () => {
+  return false;
   try {
     const totalEvents = await eventSchema.find();
 
